@@ -1,10 +1,57 @@
 import { $, el, params, getJSON, header, sevChip, statusChip, copyButton, when, CLASS_LABEL, bars, SEV_COLOR, CLASS_COLOR } from "./app.js"
 $("#hdr").replaceWith(header())
-const scan = params.get("scan"), t = params.get("t")
+const scan = params.get("scan"), t = params.get("t"), t_ = t
 const STAGE_WORD = { queued: "Queued", cloning: "Cloning", scanning: "Scanning", triaging: "Triaging", planning: "Planning", fixing: "Fixing", verifying: "Verifying", done: "Done", error: "Stopped" }
 const ORDER = ["cloning", "scanning", "triaging", "planning", "fixing", "verifying", "done"]
 let timer
 let startedAt = null
+let mermaidMod = null
+let lastTreeKey = ""
+async function repoMap() {
+  try {
+    const t = await getJSON(`api/scans/${encodeURIComponent(scan)}/tree?t=${encodeURIComponent(t_)}`)
+    if (!t.available) return
+    const key = JSON.stringify(t.flagged) + t.dirs.length
+    if (key === lastTreeKey) return
+    lastTreeKey = key
+    $("#repomap").hidden = false
+    $("#rm-meta").textContent = `${t.dirs.length} top-level folders · ${t.flagged.length} file${t.flagged.length === 1 ? "" : "s"} flagged`
+    const q = (x) => '"' + String(x).replace(/"/g, "'") + '"'
+    const id = (x) => "n" + Math.abs([...x].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)).toString(36)
+    const lines = ["flowchart LR", `  ROOT[${q(t.repo)}]:::root`]
+    const dirIds = new Map()
+    for (const d of t.dirs) {
+      const langs = Object.entries(d.langs).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k} ${v}`).join(", ")
+      const nid = id("dir:" + d.name)
+      dirIds.set(d.name, nid)
+      lines.push(`  ${nid}[${q(d.name + "/\n" + d.files + " files" + (langs ? " · " + langs : ""))}]:::dir`)
+      lines.push(`  ROOT --> ${nid}`)
+    }
+    if (t.root_files) { lines.push(`  RF[${q(t.root_files + " files at root")}]:::dir`); lines.push("  ROOT --> RF") }
+    for (const f of t.flagged) {
+      const top = f.path.includes("/") ? f.path.split("/")[0] : null
+      const parent = top && dirIds.has(top) ? dirIds.get(top) : t.root_files ? "RF" : "ROOT"
+      const cls = f.real ? "bad" : f.pending ? "wait" : "ok"
+      const label = f.path.split("/").pop() + "\n" + (f.real ? `${f.real} real${f.classes.length ? " · " + f.classes.join(", ") : ""}` : f.pending ? `${f.pending} triaging` : `${f.noise} noise`)
+      lines.push(`  ${id("f:" + f.path)}[${q(label)}]:::${cls}`)
+      lines.push(`  ${parent} --> ${id("f:" + f.path)}`)
+    }
+    lines.push("  classDef root fill:#f2b33d,stroke:#f2b33d,color:#1a1304,font-weight:bold")
+    lines.push("  classDef dir fill:#221f1a,stroke:#3a3528,color:#f3eee3")
+    lines.push("  classDef bad fill:#3a1410,stroke:#ff5a4e,color:#ffc9c4")
+    lines.push("  classDef wait fill:#2a1d0a,stroke:#f2b33d,color:#f4d79a")
+    lines.push("  classDef ok fill:#1b1915,stroke:#8f877a,color:#c9c1b0")
+    if (!mermaidMod) {
+      mermaidMod = (await import("./vendor/mermaid.esm.min.mjs")).default
+      mermaidMod.initialize({ startOnLoad: false, theme: "dark", securityLevel: "strict", flowchart: { curve: "basis", nodeSpacing: 24, rankSpacing: 40, htmlLabels: false }, themeVariables: { fontFamily: "IBM Plex Sans", background: "#15130f", primaryColor: "#221f1a", lineColor: "#8f877a", primaryTextColor: "#f3eee3" } })
+    }
+    const { svg } = await mermaidMod.render("rm-svg-" + Date.now(), lines.join("\n"))
+    const wrap = $("#rm-diagram")
+    wrap.replaceChildren()
+    const doc = new DOMParser().parseFromString(svg, "image/svg+xml")
+    wrap.append(document.adoptNode(doc.documentElement))
+  } catch (e) { console.warn("repo map", e.message) }
+}
 const seenIssues = new Set()
 const seenLog = new Set()
 
@@ -79,6 +126,7 @@ async function load() {
   $("#elapsed").textContent = done ? "" : `${Math.max(0, (Date.now() - startedAt) / 1000).toFixed(0)} s`
   renderTracker(d.events, st)
   renderLog(d.events)
+  if (d.events.some((e) => e.stage === "scanning")) repoMap()
   const fixingNow = d.events.find((e) => e.stage === "fixing" && e.detail.startsWith("fixing ") && e.detail.includes(":"))
   const fixingKey = fixingNow && st.stage !== "done" ? fixingNow.detail.slice(7) : null
   $("#stage-word").textContent = STAGE_WORD[st.stage] || st.stage

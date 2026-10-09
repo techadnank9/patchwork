@@ -410,3 +410,11 @@ details .issues { margin-top: 12px; }
 .lr-feed li span:last-child { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .muted { color: var(--ink-3); } .red { color: var(--red); } .blue { color: var(--blue); } .amber { color: var(--amber); }
 @media (max-width: 800px) { .twocol, .live-grid { grid-template-columns: 1fr; } }
+
+/* ---------- repo map ---------- */
+.repomap { margin-top: 18px; background: var(--panel); border-radius: var(--radius); padding: 14px 18px 12px; }
+.repomap-head { display: flex; align-items: baseline; gap: 14px; }
+.repomap-head h2 { margin: 0; font-size: 22px; }
+.mermaid-wrap { margin-top: 10px; overflow: auto; background: var(--bg-2); border-radius: 10px; padding: 8px; }
+.mermaid-wrap svg { max-width: none; min-width: 100%; height: auto; }
+.rm-legend { font-size: 13px; margin-top: 8px; }

@@ -23,6 +23,12 @@
     <li data-stage="done"><span class="k">Done</span><span class="v"></span></li>
   </ol>
   <div class="activity" id="activity"><div class="activity-head"><span class="live-dot"></span>Activity</div><ol id="log"></ol></div>
+  <section class="repomap" id="repomap" hidden>
+    <div class="repomap-head"><h2>Repo map</h2><span class="muted" id="rm-meta"></span></div>
+    <div class="mermaid-wrap" id="rm-diagram"></div>
+    <p class="muted rm-legend">Red: file with a confirmed issue. Amber: still being triaged. Gray: findings ruled out as noise. Directories show file counts.</p>
+  </section>
+
   <div class="counts">
     <div class="real"><span class="n" id="c-real">0</span><span class="l">Real issues</span></div>
     <div class="noise"><span class="n" id="c-noise">0</span><span class="l">Noise ruled out</span></div>

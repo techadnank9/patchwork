@@ -4,7 +4,9 @@
   "private": true,
   "description": "Found, fixed, proven. A free opt-in security desk for a hackathon room: Semgrep finds, Guild agents triage/plan/fix, every patch is verified by rescan, ClickHouse keeps the room's memory.",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node --env-file=.env server.mjs",
     "init-db": "node --env-file=.env scripts/init-db.mjs",
@@ -14,6 +16,7 @@
   "dependencies": {
     "@clickhouse/client": "^1.11.0",
     "express": "^4.21.2",
+    "mermaid": "^12.1.0",
     "qrcode": "^1.5.4"
   }
 }

@@ -22,7 +22,7 @@ app.use(express.json({ limit: "16kb" }))
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff")
   res.setHeader("Referrer-Policy", "no-referrer")
-  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'")
+  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; worker-src 'self' blob:; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'")
   next()
 })
 app.use(express.static("public", { extensions: ["html"] }))
@@ -175,6 +175,56 @@ app.get("/api/scans/:id", async (req, res) => {
       findings_total: Number(findingsCount),
       patch_available: fixes.rows.some((f) => f.status === "verified"),
     })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Repo map: top-level layout of our clone plus every file Semgrep flagged, for the diagram on the report.
+app.get("/api/scans/:id/tree", async (req, res) => {
+  try {
+    const scan = await authScan(req, res)
+    if (!scan) return res.status(404).json({ error: "Not found" })
+    const dir = path.join(WORK_DIR, scan.scan_id)
+    const { readdir, stat } = await import("node:fs/promises")
+    const SKIP = new Set(["node_modules", ".git", "vendor", "dist", "build", ".next", "__pycache__", ".venv", "venv"])
+    const dirs = []
+    let rootFiles = 0
+    try {
+      for (const name of await readdir(dir)) {
+        if (SKIP.has(name)) continue
+        const st = await stat(path.join(dir, name))
+        if (st.isDirectory()) {
+          let files = 0, subdirs = 0
+          const langs = {}
+          const walk = async (d, depth) => {
+            for (const n of await readdir(d)) {
+              if (SKIP.has(n)) continue
+              const p2 = path.join(d, n)
+              const s2 = await stat(p2)
+              if (s2.isDirectory()) { subdirs++; if (depth < 3) await walk(p2, depth + 1) }
+              else { files++; const ext = n.includes(".") ? n.split(".").pop().toLowerCase() : "other"; langs[ext] = (langs[ext] || 0) + 1 }
+            }
+          }
+          await walk(path.join(dir, name), 1)
+          dirs.push({ name, files, subdirs, langs })
+        } else rootFiles++
+      }
+    } catch (e) {
+      return res.json({ available: false, reason: "clone no longer on disk", flagged: [] })
+    }
+    const { rows } = await query(`SELECT f.path AS path, f.rule_id AS rule_id, v.verdict AS verdict, v.severity AS severity, v.bug_class AS bug_class
+      FROM findings AS f LEFT JOIN verdicts AS v ON v.finding_id = f.finding_id WHERE f.scan_id = {scan_id:String}`, { scan_id: scan.scan_id })
+    const flagged = new Map()
+    for (const r of rows) {
+      const cur = flagged.get(r.path) || { path: r.path, findings: 0, real: 0, noise: 0, pending: 0, worst: "", classes: new Set() }
+      cur.findings++
+      if (r.verdict === "real") { cur.real++; cur.classes.add(r.bug_class); if (r.severity === "high" || (!cur.worst && r.severity)) cur.worst = r.severity === "high" ? "high" : cur.worst || r.severity }
+      else if (r.verdict === "noise") cur.noise++
+      else cur.pending++
+      flagged.set(r.path, cur)
+    }
+    res.json({ available: true, repo: scan.repo_url.replace("https://github.com/", "").replace(/^fixture:\/\//, ""), root_files: rootFiles, dirs: dirs.sort((a, b) => b.files - a.files).slice(0, 14), flagged: [...flagged.values()].map((f) => ({ ...f, classes: [...f.classes] })) })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
