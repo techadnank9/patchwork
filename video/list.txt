@@ -1,0 +1,8 @@
+file 'clips/s1_why.mp4'
+file 'clips/s2_what.mp4'
+file 'clips/s3_join.mp4'
+file 'clips/s4_report.mp4'
+file 'clips/s5_proof.mp4'
+file 'clips/s6_room.mp4'
+file 'clips/s7_stack.mp4'
+file 'clips/s8_cta.mp4'

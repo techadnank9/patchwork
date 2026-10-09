@@ -1,0 +1,13 @@
+{
+  "voice": "nPczCjzI2devNBz1zQrb",
+  "scenes": [
+    {"id": "s1_why", "text": "Every team in this room shipped A I written code today. It's fast. It works. And almost nobody had time to review it. Scanners can find hundreds of things, but most of it is noise, and a tired team at four p m can't sort through that alone."},
+    {"id": "s2_what", "text": "So we built Patchwork. A free, opt in security desk for the whole room. You paste a public GitHub link, and we do the rest. Found. Fixed. Proven."},
+    {"id": "s3_join", "text": "Here's how it works. A team enters their name and their repo. They choose whether to appear on the public board. And they can pick guided mode, to run each step themselves."},
+    {"id": "s4_report", "text": "We clone a shallow copy, and Semgrep scans every file. Right away you can see the repo map. Red files have real problems. Then three agents, hosted on Guild, take over. The first one reads each finding with its code, and decides, honestly, real or noise. The second writes a fix plan, ordered by what matters most. The third writes the smallest safe patch."},
+    {"id": "s5_proof", "text": "And this is the part we care about most. Every patch is applied to our own copy, never yours. We check that the file still parses, and we rescan it with Semgrep. Only patches that pass are shown. Finding gone. Zero new issues. Time from found to fixed, in seconds. And with one click, each verified fix becomes its own pull request."},
+    {"id": "s6_room", "text": "Then it gets interesting, because it's a whole room. When the same bug shows up in another project, the board connects them. We call that variant hunt. And every proven fix is remembered, so the next team with the same mistake gets fixed faster. That's room memory."},
+    {"id": "s7_stack", "text": "Under the hood, Semgrep finds every issue, and proves every fix. Guild hosts and runs all three agents, and every answer links back to its Guild session as an audit trail. ClickHouse holds every scan, finding, verdict and fix, and drives variant hunt and room memory in milliseconds. And Akash runs the whole thing, in a single container."},
+    {"id": "s8_cta", "text": "We never run your code, we mask every secret, and your report stays private. Fix once, prevent everywhere, for a whole room, in one afternoon. Scan the code, and try it on your repo."}
+  ]
+}
