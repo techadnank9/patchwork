@@ -62,6 +62,7 @@ export function statusChip(issue) {
   const f = issue.fix
   if (issue.fixed_in_rescan) return el("span", { class: "chip fixed", text: "Fixed" })
   if (f?.status === "verified") return el("span", { class: "chip ready", text: "Patch ready" })
+  if (issue.covered) return el("span", { class: "chip ready", text: "Covered by a patch" })
   if (f?.status === "needs_human") return el("span", { class: "chip human", text: "Needs a human" })
   if (f?.status === "failed") return el("span", { class: "chip human", text: "Retrying" })
   return el("span", { class: "chip none", text: "Not attempted" })

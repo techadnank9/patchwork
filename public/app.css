@@ -253,7 +253,7 @@ details .issues { margin-top: 12px; }
 
 /* ---------- history ---------- */
 .hist { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 15px; }
-.hist th { text-align: left; font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; font-size: 14px; color: var(--ink-3); padding: 8px 10px; border-bottom: 1px solid var(--line-2); }
+.hist th { text-align: left; white-space: nowrap; font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; font-size: 14px; color: var(--ink-3); padding: 8px 10px; border-bottom: 1px solid var(--line-2); }
 .hist td { padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .hist td.num { font-family: var(--display); font-size: 24px; font-weight: 600; line-height: 1; text-align: right; }
 .hist td.num.real { color: var(--red); }

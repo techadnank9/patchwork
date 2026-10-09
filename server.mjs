@@ -153,7 +153,13 @@ app.get("/api/scans/:id", async (req, res) => {
     for (const f of fixes.rows) if (!latestFix.has(f.finding_id)) latestFix.set(f.finding_id, f)
     const findingsCount = (await query("SELECT count() AS n FROM findings WHERE scan_id = {scan_id:String}", { scan_id })).rows[0]?.n || 0
     const variantByRule = new Map(variants.rows.map((v) => [v.rule_id, v]))
-    const all = issues.rows.map((i) => ({ ...i, fix: latestFix.get(i.finding_id) || null, variant: variantByRule.get(i.rule_id) || null }))
+    const verifiedPaths = new Set(issues.rows.filter((i) => latestFix.get(i.finding_id)?.status === "verified").map((i) => i.path))
+    const all = issues.rows.map((i) => {
+      const fix = latestFix.get(i.finding_id) || null
+      // A sibling patch in the same file can make this finding vanish before the fixer reaches it.
+      const covered = !fix && i.verdict === "real" && verifiedPaths.has(i.path) ? 1 : 0
+      return { ...i, fix, covered, variant: variantByRule.get(i.rule_id) || null }
+    })
     const live = stageOf.get(scan_id)
     const latest = events.rows[0]
     let planObj = null

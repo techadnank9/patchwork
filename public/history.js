@@ -9,11 +9,11 @@ async function load() {
     el("td", {}, el("div", { class: "team", text: s.is_public ? s.team : `${s.team} (not on board)` }), el("div", { class: "repo", text: s.repo_url.replace("https://github.com/", "") }), SRC[s.source] ? el("div", { class: "src", text: SRC[s.source] }) : null,
       s.bug_classes?.length ? el("div", { class: "classes" }, ...s.bug_classes.map((c) => el("span", { text: CLASS_LABEL[c] || c }))) : null),
     el("td", {}, el("span", { class: `chip ${s.stage === "done" ? "fixed" : s.stage === "error" ? "high" : "none"}`, text: s.stage || "queued" }), el("div", { class: "src", text: s.stage === "done" ? "" : s.detail || "" })),
-    el("td", { class: "num", text: s.findings }),
-    el("td", { class: "num real", text: s.real_issues }),
-    el("td", { class: "num", text: s.noise }),
-    el("td", { class: "num fix", text: s.verified_fixes }),
-    el("td", { class: "num", text: s.needs_human }),
+    el("td", { class: "num", text: String(s.findings ?? 0) }),
+    el("td", { class: "num real", text: String(s.real_issues ?? 0) }),
+    el("td", { class: "num", text: String(s.noise ?? 0) }),
+    el("td", { class: "num fix", text: String(s.verified_fixes ?? 0) }),
+    el("td", { class: "num", text: String(s.needs_human ?? 0) }),
   )))
   if (!d.scans.length) $("#rows").replaceChildren(el("tr", { class: "empty" }, el("td", { colspan: 8, text: "No scans yet." })))
 }

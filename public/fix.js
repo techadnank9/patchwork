@@ -32,7 +32,7 @@ if (!i) { $("#title").textContent = "Finding not found" } else {
     $("#dl").href = `api/scans/${encodeURIComponent(scan)}/patch?t=${encodeURIComponent(t)}`
   } else if (i.verdict === "real") {
     $("#nofix-sec").hidden = false
-    $("#nofix").textContent = !f ? "The fixer has not reached this issue yet, or the per-repo fix limit was hit. The plan above still tells you what to change." : f.status === "needs_human" ? `Two attempts did not pass verification. Last reason: ${f.error}. A person should make this change.` : `Attempt ${f.attempt} did not pass: ${f.error}. Retrying.`
+    $("#nofix").textContent = i.covered ? "A verified patch to the same file already removed this finding. Semgrep no longer reports it after that patch, so no separate fix was needed." : !f ? "The fixer has not reached this issue yet, or the per-repo fix limit was hit. The plan above still tells you what to change." : f.status === "needs_human" ? `Two attempts did not pass verification. Last reason: ${f.error}. A person should make this change.` : `Attempt ${f.attempt} did not pass: ${f.error}. Retrying.`
   }
   const links = []
   if (i.triage_session) links.push(el("a", { href: i.triage_session, target: "_blank", rel: "noopener", text: "Triage session on Guild" }))
