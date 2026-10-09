@@ -44,22 +44,22 @@ And because a room full of teams makes the same mistakes, two ideas turn one rep
 ```mermaid
 flowchart LR
     subgraph Team
-        P[Phone or laptop]
+        P["Phone or laptop"]
     end
     subgraph Akash["Akash (one container)"]
-        S[Express server<br/>static UI + JSON API]
-        Q[In-memory FIFO queue<br/>2 scans at a time]
-        W[worker.mjs<br/>pipeline for one scan]
-        SG[Semgrep CLI]
-        G[git clone<br/>our copy in work/]
+        S["Express server<br/>static UI + JSON API"]
+        Q["In-memory FIFO queue<br/>2 scans at a time"]
+        W["worker.mjs<br/>pipeline for one scan"]
+        SG["Semgrep CLI"]
+        G["git clone<br/>our copy in work/"]
     end
     subgraph Guild["Guild (hosted agents)"]
-        T[triage-agent]
-        PL[planner-agent]
-        F[fixer-agent]
+        T["triage-agent"]
+        PL["planner-agent"]
+        F["fixer-agent"]
     end
     subgraph CH["ClickHouse Cloud"]
-        D[(scans · findings · verdicts<br/>plans · fixes · fix_memory<br/>pipeline_events)]
+        D[("scans · findings · verdicts<br/>plans · fixes · fix_memory<br/>pipeline_events")]
     end
 
     P -- "POST /api/scans" --> S
@@ -79,15 +79,15 @@ One process, no build step, no framework. The browser polls JSON every two secon
 
 ```mermaid
 flowchart TD
-    A[Validate URL<br/>only https://github.com/owner/repo] --> B[Shallow clone<br/>depth 1, no submodules, 60 s cap, 300 MB cap]
-    B --> C[Semgrep scan<br/>--config auto, whole clone]
-    C --> D[Filter and rank<br/>drop vendor, dist, lockfiles, minified<br/>ERROR > WARNING > INFO]
-    D --> E[Snippet<br/>12 lines each side, path contained,<br/>secrets masked before storing]
-    E --> F{Triage on Guild<br/>4 in parallel, top 15}
-    F -- noise --> N[Stored, shown in<br/>"findings we ruled out"]
-    F -- real --> G[Plan on Guild<br/>one call with all real issues]
-    G --> H[Fix and verify loop<br/>in plan order, up to 5]
-    H --> I[Done<br/>private report + board update]
+    A["Validate URL<br/>only https://github.com/owner/repo"] --> B["Shallow clone<br/>depth 1, no submodules, 60 s cap, 300 MB cap"]
+    B --> C["Semgrep scan<br/>--config auto, whole clone"]
+    C --> D["Filter and rank<br/>drop vendor, dist, lockfiles, minified<br/>ERROR > WARNING > INFO"]
+    D --> E["Snippet<br/>12 lines each side, path contained,<br/>secrets masked before storing"]
+    E --> F{"Triage on Guild<br/>4 in parallel, top 15"}
+    F -- noise --> N["Stored, shown in<br/>'findings we ruled out'"]
+    F -- real --> G["Plan on Guild<br/>one call with all real issues"]
+    G --> H["Fix and verify loop<br/>in plan order, up to 5"]
+    H --> I["Done<br/>private report + board update"]
     N --> I
 ```
 
@@ -97,23 +97,23 @@ Every stage writes a `pipeline_events` row at start and end with its duration. T
 
 ```mermaid
 flowchart TD
-    S0[Baseline: Semgrep on just this file<br/>find the rule nearest the original line] --> S1{Room memory<br/>Q7: proven fix for this rule?}
-    S1 -- yes --> S2[Pass it as prior_example<br/>memory_hit = 1]
-    S1 -- no --> S3[Window: whole file if ≤ 300 lines,<br/>else 60 lines each side, numbered, masked]
+    S0["Baseline: Semgrep on just this file<br/>find the rule nearest the original line"] --> S1{"Room memory<br/>Q7: proven fix for this rule?"}
+    S1 -- yes --> S2["Pass it as prior_example<br/>memory_hit = 1"]
+    S1 -- no --> S3["Window: whole file if ≤ 300 lines,<br/>else 60 lines each side, numbered, masked"]
     S2 --> S3
-    S3 --> S4[fixer-agent on Guild<br/>returns START_LINE, END_LINE, EXPLANATION, replacement]
-    S4 --> S5{Guards<br/>in window? ≤ 120 lines?<br/>no masked value copied?}
-    S5 -- fail --> R1[Record failed, retry once<br/>with retry_error]
-    S5 -- ok --> S6[Apply to OUR clone]
-    S6 --> S7{Syntax check<br/>py: ast.parse · js: node --check · json: parse}
-    S7 -- fail --> R2[git checkout -- file<br/>record failed, retry once]
-    S7 -- ok --> S8[Rescan the file with Semgrep]
-    S8 --> S9{Finding gone?<br/>Zero new rules?}
+    S3 --> S4["fixer-agent on Guild<br/>returns START_LINE, END_LINE, EXPLANATION, replacement"]
+    S4 --> S5{"Guards<br/>in window? ≤ 120 lines?<br/>no masked value copied?"}
+    S5 -- fail --> R1["Record failed, retry once<br/>with retry_error"]
+    S5 -- ok --> S6["Apply to OUR clone"]
+    S6 --> S7{"Syntax check<br/>py: ast.parse · js: node --check · json: parse"}
+    S7 -- fail --> R2["git checkout -- file<br/>record failed, retry once"]
+    S7 -- ok --> S8["Rescan the file with Semgrep"]
+    S8 --> S9{"Finding gone?<br/>Zero new rules?"}
     S9 -- no --> R2
-    S9 -- yes --> V[git diff → stored diff<br/>commit in clone<br/>fixes.status = verified<br/>fix_memory row saved]
-    R1 --> R3{Second failure?}
+    S9 -- yes --> V["git diff → stored diff<br/>commit in clone<br/>fixes.status = verified<br/>fix_memory row saved"]
+    R1 --> R3{"Second failure?"}
     R2 --> R3
-    R3 -- yes --> NH[needs_human]
+    R3 -- yes --> NH["needs_human"]
     R3 -- no --> S4
 ```
 
@@ -124,24 +124,24 @@ The report's combined patch is `git diff <original sha> HEAD` in our clone. Team
 ```mermaid
 flowchart LR
     subgraph Semgrep
-        s1[Find every issue<br/>semgrep scan --config auto]
-        s2[Prove every fix<br/>per-file rescan after patch]
-        s3[Semgrep Guardian watched<br/>our own code as it was written<br/>→ FINDINGS.md]
+        s1["Find every issue<br/>semgrep scan --config auto"]
+        s2["Prove every fix<br/>per-file rescan after patch"]
+        s3["Semgrep Guardian watched<br/>our own code as it was written<br/>→ FINDINGS.md"]
     end
     subgraph Guild
-        g1[triage-agent<br/>real or noise, severity, class, why]
-        g2[planner-agent<br/>root causes, order, minutes]
-        g3[fixer-agent<br/>line range + replacement]
-        g4[Every row stores its<br/>session_url as the audit trail]
+        g1["triage-agent<br/>real or noise, severity, class, why"]
+        g2["planner-agent<br/>root causes, order, minutes"]
+        g3["fixer-agent<br/>line range + replacement"]
+        g4["Every row stores its<br/>session_url as the audit trail"]
     end
     subgraph ClickHouse
-        c1[Append-only tables,<br/>state derived by query]
-        c2[Q3 variant hunt:<br/>same rule, many projects]
-        c3[Q7 room memory:<br/>proven fix → next fixer call]
-        c4[Row count + query ms<br/>on the board, always]
+        c1["Append-only tables,<br/>state derived by query"]
+        c2["Q3 variant hunt:<br/>same rule, many projects"]
+        c3["Q7 room memory:<br/>proven fix → next fixer call"]
+        c4["Row count + query ms<br/>on the board, always"]
     end
     subgraph Akash
-        a1[Hosts the whole app:<br/>one container, public GHCR image,<br/>SDL in deploy.yaml]
+        a1["Hosts the whole app:<br/>one container, public GHCR image,<br/>SDL in deploy.yaml"]
     end
     s1 --> g1 --> g2 --> g3 --> s2
     g1 & g2 & g3 --> c1
