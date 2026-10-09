@@ -9,7 +9,7 @@
     "start": "node --env-file=.env server.mjs",
     "init-db": "node --env-file=.env scripts/init-db.mjs",
     "worker": "node --env-file=.env worker.mjs",
-    "test": "node --test test/"
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@clickhouse/client": "^1.11.0",
