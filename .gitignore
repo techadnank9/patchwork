@@ -1,3 +1,5 @@
 .env
 work/
 node_modules/
+.claude/
+.mcp.json
