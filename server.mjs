@@ -1,0 +1,239 @@
+// Patchwork server: Express, static public/, in-memory FIFO queue, JSON API.
+import express from "express"
+import { randomBytes, randomUUID } from "node:crypto"
+import { execFile } from "node:child_process"
+import { promisify } from "node:util"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
+import { insertNow, query, flush } from "./lib/db.mjs"
+import { validateRepoUrl, WORK_DIR } from "./lib/repo.mjs"
+import { runScan } from "./worker.mjs"
+
+const run = promisify(execFile)
+const PORT = Number(process.env.PORT || 3000)
+const BASE = (process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, "")
+const SCAN_CONCURRENCY = Number(process.env.SCAN_CONCURRENCY || 2)
+const SQL = await loadQueries()
+
+const app = express()
+app.disable("x-powered-by")
+app.set("trust proxy", 1)
+app.use(express.json({ limit: "16kb" }))
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff")
+  res.setHeader("Referrer-Policy", "no-referrer")
+  res.setHeader("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; style-src-elem 'self' https://fonts.googleapis.com 'unsafe-inline'")
+  next()
+})
+app.use(express.static("public", { extensions: ["html"] }))
+
+// ---------- queue ----------
+const queue = []
+const active = new Map() // repo_url -> scan_id
+const stageOf = new Map() // scan_id -> { stage, detail }
+let running = 0
+
+function enqueue(job) {
+  queue.push(job)
+  stageOf.set(job.scan_id, { stage: "queued", detail: `position ${queue.length}` })
+  pump()
+}
+function pump() {
+  while (running < SCAN_CONCURRENCY && queue.length) {
+    const job = queue.shift()
+    running++
+    active.set(job.repo_url, job.scan_id)
+    runScan({ ...job, log: (...a) => console.log(...a) })
+      .catch((e) => console.error(`[scan ${job.scan_id.slice(0, 8)}] failed: ${e.message}`))
+      .finally(() => {
+        running--
+        active.delete(job.repo_url)
+        pump()
+      })
+  }
+}
+
+// ---------- rate limit: 3 scans per minute per IP ----------
+const hits = new Map()
+function limited(ip) {
+  const now = Date.now()
+  const list = (hits.get(ip) || []).filter((t) => now - t < 60000)
+  if (list.length >= 3) return true
+  list.push(now)
+  hits.set(ip, list)
+  return false
+}
+
+// ---------- API ----------
+app.post("/api/scans", async (req, res) => {
+  try {
+    if (limited(req.ip)) return res.status(429).json({ error: "Three scans per minute per device. Try again shortly." })
+    const team = String(req.body?.team || "").trim().slice(0, 60)
+    if (!team) return res.status(400).json({ error: "Team name is required" })
+    const repo_url = validateRepoUrl(String(req.body?.repo_url || ""))
+    const is_public = req.body?.is_public ? 1 : 0
+    if (active.has(repo_url) || queue.some((j) => j.repo_url === repo_url)) {
+      return res.status(409).json({ error: "That repo is already being scanned. Wait for it to finish." })
+    }
+    const scan_id = randomUUID()
+    const token = randomBytes(16).toString("hex")
+    await insertNow("scans", { scan_id, token, team, repo_url, is_public, source: "room" })
+    enqueue({ scan_id, team, repo_url, is_public, source: "room" })
+    res.json({ scan_id, report_url: `${BASE}/report.html?scan=${scan_id}&t=${token}` })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+let boardCache = { at: 0, body: null }
+app.get("/api/board", async (req, res) => {
+  const sample = req.query.sample === "1"
+  if (!sample && boardCache.body && Date.now() - boardCache.at < 1000) return res.json(boardCache.body)
+  try {
+    const source = sample ? "sample" : "room"
+    const started = performance.now()
+    const [cells, totals, variants, headline, speed, feed, counts] = await Promise.all([
+      query(withSource(SQL.Q1, source)),
+      query(withSource(SQL.Q2, source)),
+      query(withSource(SQL.Q3, source)),
+      query(withSource(SQL.Q4, source)),
+      query(SQL.Q5),
+      query(withSource(SQL.Q6, source)),
+      query("SELECT (SELECT count() FROM scans) + (SELECT count() FROM pipeline_events) + (SELECT count() FROM findings) + (SELECT count() FROM verdicts) + (SELECT count() FROM plans) + (SELECT count() FROM fixes) + (SELECT count() FROM fix_memory) AS rows_total"),
+    ])
+    const body = {
+      cells: cells.rows, totals: totals.rows[0] || {}, variants: variants.rows, headline: headline.rows[0] || null,
+      speed: speed.rows[0] || {}, feed: feed.rows, rows_total: Number(counts.rows[0]?.rows_total || 0),
+      query_ms: Math.round((performance.now() - started) * 10) / 10,
+      queries_ms: { cells: cells.query_ms, totals: totals.query_ms, variants: variants.query_ms, headline: headline.query_ms, speed: speed.query_ms, feed: feed.query_ms },
+      sample, queue: { waiting: queue.length, running },
+      generated_at: new Date().toISOString(),
+    }
+    if (!sample) boardCache = { at: Date.now(), body }
+    res.json(body)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get("/api/history", async (req, res) => {
+  try {
+    const started = performance.now()
+    const { rows } = await query(SQL.H1)
+    res.json({ scans: rows, query_ms: Math.round((performance.now() - started) * 10) / 10 })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+async function authScan(req, res) {
+  const scan_id = String(req.params.id || "")
+  const t = String(req.query.t || "")
+  if (!/^[0-9a-f-]{36}$/.test(scan_id) || !/^[0-9a-f]{32}$/.test(t)) return null
+  const { rows } = await query("SELECT scan_id, token, team, repo_url, is_public, source, created_at FROM scans WHERE scan_id = {scan_id:String} LIMIT 1", { scan_id })
+  const scan = rows[0]
+  if (!scan || scan.token !== t) return null
+  delete scan.token
+  return scan
+}
+
+app.get("/api/scans/:id", async (req, res) => {
+  try {
+    const scan = await authScan(req, res)
+    if (!scan) return res.status(404).json({ error: "Not found" })
+    const scan_id = scan.scan_id
+    const [events, plan, issues, fixes, variants] = await Promise.all([
+      query("SELECT ts, stage, detail, duration_ms FROM pipeline_events WHERE scan_id = {scan_id:String} ORDER BY ts DESC LIMIT 50", { scan_id }),
+      query("SELECT plan_json, session_url, latency_ms FROM plans WHERE scan_id = {scan_id:String} ORDER BY ts DESC LIMIT 1", { scan_id }),
+      query(SQL.Q8, { scan_id }),
+      query("SELECT fix_id, finding_id, attempt, status, memory_hit, explanation, diff, syntax_ok, finding_gone, new_issues, error, session_url, latency_ms, ts FROM fixes WHERE scan_id = {scan_id:String} ORDER BY ts DESC", { scan_id }),
+      query(withSource(SQL.Q3, scan.source)),
+    ])
+    const latestFix = new Map()
+    for (const f of fixes.rows) if (!latestFix.has(f.finding_id)) latestFix.set(f.finding_id, f)
+    const findingsCount = (await query("SELECT count() AS n FROM findings WHERE scan_id = {scan_id:String}", { scan_id })).rows[0]?.n || 0
+    const variantByRule = new Map(variants.rows.map((v) => [v.rule_id, v]))
+    const all = issues.rows.map((i) => ({ ...i, fix: latestFix.get(i.finding_id) || null, variant: variantByRule.get(i.rule_id) || null }))
+    const live = stageOf.get(scan_id)
+    const latest = events.rows[0]
+    let planObj = null
+    try { planObj = plan.rows[0] ? JSON.parse(plan.rows[0].plan_json) : null } catch {}
+    res.json({
+      scan,
+      status: latest ? { stage: latest.stage, detail: latest.detail, ts: latest.ts } : live || { stage: "queued", detail: "" },
+      events: events.rows,
+      plan: planObj,
+      plan_session: plan.rows[0]?.session_url || "",
+      issues: all.filter((i) => i.verdict === "real"),
+      noise: all.filter((i) => i.verdict === "noise"),
+      findings_total: Number(findingsCount),
+      patch_available: fixes.rows.some((f) => f.status === "verified"),
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get("/api/scans/:id/patch", async (req, res) => {
+  try {
+    const scan = await authScan(req, res)
+    if (!scan) return res.status(404).type("text/plain").send("Not found")
+    const dir = path.join(WORK_DIR, scan.scan_id)
+    let patch = ""
+    try {
+      const { stdout: first } = await run("git", ["rev-list", "--max-parents=0", "HEAD"], { cwd: dir })
+      patch = (await run("git", ["diff", first.trim(), "HEAD"], { cwd: dir, maxBuffer: 16 * 1024 * 1024 })).stdout
+    } catch {
+      // clone gone: rebuild from stored diffs
+      const { rows } = await query("SELECT diff FROM fixes WHERE scan_id = {scan_id:String} AND status = 'verified' ORDER BY ts", { scan_id: scan.scan_id })
+      patch = rows.map((r) => r.diff).join("\n")
+    }
+    res.setHeader("Content-Disposition", 'attachment; filename="patchwork.patch"')
+    res.type("text/plain").send(patch)
+  } catch (e) {
+    res.status(500).type("text/plain").send(e.message)
+  }
+})
+
+app.post("/api/scans/:id/rescan", async (req, res) => {
+  try {
+    const scan = await authScan(req, res)
+    if (!scan) return res.status(404).json({ error: "Not found" })
+    if (active.has(scan.repo_url)) return res.status(409).json({ error: "Already scanning" })
+    const scan_id = randomUUID()
+    const token = randomBytes(16).toString("hex")
+    await insertNow("scans", { scan_id, token, team: scan.team, repo_url: scan.repo_url, is_public: scan.is_public, source: scan.source })
+    enqueue({ scan_id, team: scan.team, repo_url: scan.repo_url, is_public: scan.is_public, source: scan.source })
+    res.json({ scan_id, report_url: `${BASE}/report.html?scan=${scan_id}&t=${token}` })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get("/api/qr", async (req, res) => {
+  const QRCode = (await import("qrcode")).default
+  const svg = await QRCode.toString(`${BASE}/join.html`, { type: "svg", margin: 1, color: { dark: "#f4f1ea", light: "#0000" } })
+  res.type("image/svg+xml").send(svg)
+})
+
+app.get("/api/config", (req, res) => res.json({ base: BASE }))
+
+app.listen(PORT, "127.0.0.1", () => console.log(`Patchwork on http://localhost:${PORT}  public: ${BASE}`))
+
+process.on("SIGINT", async () => { await flush().catch(() => {}); process.exit(0) })
+
+// ---------- helpers ----------
+async function loadQueries() {
+  const text = await readFile(new URL("./queries.sql", import.meta.url), "utf8")
+  const out = {}
+  for (const block of text.split(/\n(?=-- Q\d|-- H\d)/)) {
+    const m = block.match(/^-- (Q\d|H\d)\./)
+    if (!m) continue
+    out[m[1]] = block.replace(/^--.*$/gm, "").trim().replace(/;\s*$/, "")
+  }
+  return out
+}
+// The board normally reads source = 'room'. With ?sample=1 it reads the seed rows instead.
+function withSource(sql, source) {
+  return source === "room" ? sql : sql.replaceAll("source = 'room'", `source = '${source}'`).replaceAll("latest_room_scans", `(SELECT argMax(scan_id, created_at) AS scan_id FROM scans WHERE source = '${source}' GROUP BY repo_url)`)
+}

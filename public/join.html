@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Join Patchwork</title>
+<meta name="description" content="Paste a public GitHub repo. We find, triage, plan, fix, and verify. Private report.">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="hdr"></div>
+<main class="doc narrow">
+  <h1>Get your code checked</h1>
+  <p class="lede">Paste a public GitHub link. Semgrep finds, three agents triage, plan, and patch, and every patch is applied to our copy and rescanned before you see it. Takes a few minutes.</p>
+  <form id="f" novalidate>
+    <div class="field"><label for="team">Team name</label><input id="team" type="text" maxlength="60" autocomplete="organization" placeholder="Night Owls" required></div>
+    <div class="field"><label for="repo">Public GitHub repo link</label><input id="repo" type="url" inputmode="url" placeholder="https://github.com/owner/repo" required><span class="hint">Public repos only. We clone a shallow copy and never run your code.</span></div>
+    <label class="check"><input id="pub" type="checkbox"><span>Show our team name on the public board</span></label>
+    <p class="consent">We clone your repo, scan it, and send short code excerpts with secrets masked to an AI model to explain and fix what we find. Your report is private. Your team name appears on the public board only if you tick the box. We delete our copy when the event ends.</p>
+    <div class="form-actions"><button class="btn" id="go" type="submit">Scan my repo</button><span id="msg" aria-live="polite"></span></div>
+  </form>
+</main>
+<script type="module">
+import { $, getJSON, header } from "./app.js"
+$("#hdr").replaceWith(header("join.html"))
+const form = $("#f"), msg = $("#msg"), go = $("#go")
+form.addEventListener("submit", async (e) => {
+  e.preventDefault()
+  msg.className = ""; msg.textContent = ""
+  const team = $("#team").value.trim(), repo_url = $("#repo").value.trim()
+  if (!team) return fail("Team name is required")
+  if (!/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+?(\.git)?\/?$/.test(repo_url)) return fail("That does not look like a GitHub repo link")
+  go.disabled = true; go.textContent = "Queuing…"
+  try {
+    const r = await getJSON("api/scans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ team, repo_url, is_public: $("#pub").checked }) })
+    msg.className = "ok"; msg.textContent = "Queued. Opening your private report…"
+    setTimeout(() => location.assign(r.report_url), 700)
+  } catch (err) {
+    fail(err.message); go.disabled = false; go.textContent = "Scan my repo"
+  }
+})
+function fail(t) { msg.className = "err"; msg.textContent = t }
+</script>
+</body>
+</html>

@@ -80,3 +80,18 @@ FROM findings AS f
 INNER JOIN verdicts AS v ON v.finding_id = f.finding_id
 WHERE f.scan_id = {scan_id:String}
 ORDER BY v.verdict = 'real' DESC, multiIf(v.severity = 'high', 1, v.severity = 'medium', 2, 3), f.path, f.line;
+
+-- H1. History: every scan ever run, newest first, with its counts and latest stage.
+SELECT
+  s.scan_id AS scan_id, s.created_at AS created_at, s.team AS team, s.repo_url AS repo_url, s.is_public AS is_public, s.source AS source,
+  (SELECT count() FROM findings WHERE scan_id = s.scan_id) AS findings,
+  (SELECT countIf(verdict = 'real') FROM verdicts WHERE scan_id = s.scan_id) AS real_issues,
+  (SELECT countIf(verdict = 'noise') FROM verdicts WHERE scan_id = s.scan_id) AS noise,
+  (SELECT uniqExactIf(finding_id, status = 'verified') FROM fixes WHERE scan_id = s.scan_id) AS verified_fixes,
+  (SELECT uniqExactIf(finding_id, status = 'needs_human') FROM fixes WHERE scan_id = s.scan_id) AS needs_human,
+  (SELECT argMax(stage, ts) FROM pipeline_events WHERE scan_id = s.scan_id) AS stage,
+  (SELECT argMax(detail, ts) FROM pipeline_events WHERE scan_id = s.scan_id) AS detail,
+  (SELECT groupArrayDistinct(bug_class) FROM verdicts WHERE scan_id = s.scan_id AND verdict = 'real') AS bug_classes
+FROM scans AS s
+ORDER BY s.created_at DESC
+LIMIT 200;

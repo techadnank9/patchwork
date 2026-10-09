@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patchwork board</title>
+<meta name="description" content="Live security board for the room: findings, verified fixes, variant hunt.">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="banner" class="banner" hidden>Sample data. Nothing on this screen is from a real scan.</div>
+<div id="hdr"></div>
+<main class="board">
+  <section class="stats" aria-label="Room totals">
+    <div class="stat"><span class="n" id="s-projects">0</span><span class="l">Projects checked</span></div>
+    <div class="stat"><span class="n" id="s-findings">0</span><span class="l">Findings scanned</span></div>
+    <div class="stat"><span class="n" id="s-noise">0</span><span class="l">Noise removed</span></div>
+    <div class="stat hot"><span class="n" id="s-real">0</span><span class="l">Real issues</span></div>
+    <div class="stat good"><span class="n" id="s-fixes">0</span><span class="l">Verified fixes</span></div>
+    <div class="stat good"><span class="n" id="s-memory">0</span><span class="l">Memory assisted fixes</span></div>
+    <div class="stat"><span class="n" id="s-median">–</span><span class="l">Median found to fixed, seconds</span></div>
+  </section>
+  <p class="meta"><span>ClickHouse: <b id="m-rows">0</b> rows, last query <b id="m-ms">0</b> ms</span><span id="m-queue"></span><span id="m-agents">Agents on Guild</span></p>
+
+  <section class="grid-wrap" aria-label="Teams by bug class">
+    <table class="grid">
+      <thead><tr><th>Team</th><th>Injection</th><th>Secrets</th><th>Auth</th><th>Packages</th><th>Crypto</th><th>Other</th></tr></thead>
+      <tbody id="rows"><tr class="empty"><td colspan="7">No team has opted onto the board yet. Scan the code to join.</td></tr></tbody>
+    </table>
+  </section>
+
+  <aside class="feed" aria-label="Live feed">
+    <h2>Live</h2>
+    <ol id="feed"></ol>
+  </aside>
+
+  <section class="bottom">
+    <div class="side" aria-label="Variant hunt">
+      <h2>Variant hunt</h2>
+      <p class="big" id="v-head">One bug here leads to the same bug <em>elsewhere</em>.</p>
+      <ul id="variants"><li class="muted">Waiting for the same rule to fire in two projects.</li></ul>
+    </div>
+    <div class="side" aria-label="Headline">
+      <h2>Most common flaw AI wrote today</h2>
+      <p class="big" id="headline"><span class="muted">Nothing confirmed yet.</span></p>
+      <ul id="headline-facts"></ul>
+    </div>
+    <div class="qr"><img id="qr" alt="QR code to the join page" src="api/qr"><p><b>Scan to join</b>Free, opt in, private report. Our copy, never yours.</p></div>
+  </section>
+</main>
+<script type="module">
+import { $, el, params, getJSON, fmtSecs, fmtN, CLASS_LABEL, header, when } from "./app.js"
+$("#hdr").replaceWith(header("index.html"))
+const sample = params.get("sample") === "1"
+if (sample) $("#banner").hidden = false
+const CLASSES = ["injection", "secrets", "auth", "packages", "crypto", "other"]
+const cellState = new Map()
+
+function cellFor(row) {
+  if (!row) return { cls: "clean", word: "Clean", count: "" }
+  const real = Number(row.real_issues), ready = Number(row.patch_ready), worst = Number(row.worst_open)
+  if (real > 0 && ready >= real) return { cls: "ready", word: "Patch ready", count: `${ready}` }
+  if (worst === 1) return { cls: "high", word: "High", count: `${real}` }
+  if (worst === 2) return { cls: "med", word: "Med", count: `${real}` }
+  return { cls: "low", word: "Low", count: `${real}` }
+}
+
+function renderGrid(cells) {
+  const teams = [...new Set(cells.map((c) => c.team))].sort((a, b) => a.localeCompare(b))
+  const tbody = $("#rows")
+  if (!teams.length) { tbody.replaceChildren(el("tr", { class: "empty" }, el("td", { colspan: 7, text: "No team has opted onto the board yet. Scan the code to join." }))); return }
+  const byKey = new Map(cells.map((c) => [`${c.team}|${c.bug_class}`, c]))
+  const rows = teams.map((team) => {
+    const tr = el("tr", {}, el("td", { class: "team", text: team, title: team }))
+    for (const cls of CLASSES) {
+      const key = `${team}|${cls}`
+      const s = cellFor(byKey.get(key))
+      const flap = el("div", { class: `flap ${s.cls}` }, el("span", { text: s.word }), s.count ? el("span", { class: "count", text: s.count }) : null)
+      const prev = cellState.get(key)
+      if (prev && prev !== `${s.cls}:${s.count}`) flap.classList.add("flip")
+      cellState.set(key, `${s.cls}:${s.count}`)
+      tr.append(el("td", { class: "cell" }, flap))
+    }
+    return tr
+  })
+  tbody.replaceChildren(...rows)
+}
+
+let lastFeedKey = ""
+function renderFeed(feed) {
+  const key = feed.map((f) => f.ts + f.stage + f.detail).join("|")
+  if (key === lastFeedKey) return
+  lastFeedKey = key
+  $("#feed").replaceChildren(...feed.map((f) => el("li", {},
+    el("span", {}, el("b", { text: f.team }), " · ", el("span", { class: `stage ${f.stage}`, text: f.stage })),
+    el("span", { class: "t", text: `${f.duration_ms > 0 ? fmtSecs(f.duration_ms) + " · " : ""}${when(f.ts)}` }),
+    el("span", { class: "d", text: f.detail }),
+  )))
+}
+
+function setNum(id, v) { const n = $(id); const t = fmtN(v); if (n.textContent !== t) n.textContent = t }
+
+async function tick() {
+  try {
+    const b = await getJSON(`api/board${sample ? "?sample=1" : ""}`)
+    const t = b.totals
+    setNum("#s-projects", t.projects); setNum("#s-findings", t.raw_findings); setNum("#s-noise", t.noise_removed)
+    setNum("#s-real", t.real_issues); setNum("#s-fixes", t.verified_fixes); setNum("#s-memory", t.memory_assisted_fixes)
+    $("#s-median").textContent = b.speed?.verified > 0 ? String(b.speed.median_fix_seconds) : "–"
+    $("#m-rows").textContent = fmtN(b.rows_total); $("#m-ms").textContent = String(b.query_ms)
+    $("#m-queue").textContent = b.queue.running || b.queue.waiting ? `Scanning ${b.queue.running}, waiting ${b.queue.waiting}` : "Queue idle"
+    renderGrid(b.cells)
+    renderFeed(b.feed)
+    const v = $("#variants")
+    if (b.variants.length) v.replaceChildren(...b.variants.map((r) => el("li", {}, el("span", { text: r.title || r.rule_id.split(".").pop() }), el("span", { text: `${r.projects} projects` }))))
+    if (b.headline) {
+      $("#headline").replaceChildren(el("span", { text: CLASS_LABEL[b.headline.bug_class] || b.headline.bug_class }))
+      $("#headline-facts").replaceChildren(el("li", {}, el("span", { text: "Projects with it" }), el("span", { text: String(b.headline.projects) })), el("li", {}, el("span", { text: "Confirmed issues" }), el("span", { text: String(b.headline.issues) })))
+    }
+  } catch (e) {
+    $("#m-queue").textContent = `Board offline: ${e.message}`
+  }
+}
+tick(); setInterval(tick, 2000)
+</script>
+</body>
+</html>
