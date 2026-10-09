@@ -21,4 +21,6 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/techadnank9/patchwork:latest
+          tags: |
+            ghcr.io/techadnank9/patchwork:latest
+            ghcr.io/techadnank9/patchwork:sha-${{ github.sha }}

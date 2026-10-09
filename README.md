@@ -25,7 +25,7 @@ Built solo at the Cyberdefense Hackathon, San Francisco, October 9, 2026. All co
 
 Live during the event: http://fnppdkvs7devtbbbtnlc32vqpc.ingress.cpu.lax.lsn.akash.pub (join page at /join.html, history at /history.html).
 
-Hosted on **Akash** (deployment 1791580753099, provider overclock, na-us-west, 2 vCPU, 4 GiB) from the public image `ghcr.io/techadnank9/patchwork:latest`, which GitHub Actions builds on every push to master. One container serves the frontend and the API. The SDL is [deploy.yaml](deploy.yaml); the two secret values are entered in the Akash console, never committed. Data stays in ClickHouse Cloud and agents run on Guild, so the container itself is stateless apart from the clones in `work/`.
+Hosted on **Akash** (deployment 1791580753099, provider overclock, na-us-west, 2 vCPU, 4 GiB) from the public image `ghcr.io/techadnank9/patchwork:latest`, which GitHub Actions builds on every push to master (also tagged `sha-<commit>`; Akash runs a SHA tag so providers never serve a stale `latest`). One container serves the frontend and the API. The SDL is [deploy.yaml](deploy.yaml); the two secret values are entered in the Akash console, never committed. Data stays in ClickHouse Cloud and agents run on Guild, so the container itself is stateless apart from the clones in `work/`.
 
 ## Run it
 
