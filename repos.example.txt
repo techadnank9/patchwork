@@ -1,0 +1,3 @@
+# One repo per line: link | team name | public   (write "public" only if the team said yes to being named on the board)
+https://github.com/owner/repo | Night Owls | public
+https://github.com/owner/other-repo | Blue Shift
