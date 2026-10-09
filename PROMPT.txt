@@ -1,0 +1,7 @@
+Read HANDOFF.html in this folder from top to bottom. It is the full spec for Patchwork, the project we are building today.
+
+The starter files from the spec are already in this folder at their final paths: agents/, lib/guild.mjs, schema.sql, queries.sql, .env.example, sample-input.json, .gitignore. Do not rewrite them. Build everything else around them.
+
+Follow section 2 exactly. Start with milestone 0, then milestone 1. After each milestone, run its acceptance check, show me the output, commit, and continue to the next one without waiting unless you need something from section 5.
+
+The deadline is 4:30 PM Pacific today. Respect the cut lines in section 14. Tell me what you need from me right now so I can do it while you build.

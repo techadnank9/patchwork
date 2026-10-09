@@ -1,0 +1,9 @@
+{
+  "rule_id": "python.flask.security.injection.tainted-sql-string",
+  "semgrep_severity": "ERROR",
+  "message": "User input is concatenated into a SQL string. Use parameterized queries.",
+  "path": "api/search.py",
+  "line": 42,
+  "language": "python",
+  "snippet": "38  @app.route('/search')\n39  def search():\n40      term = request.args.get('q', '')\n41      conn = get_db()\n42      rows = conn.execute(\"SELECT * FROM items WHERE name LIKE '%\" + term + \"%'\").fetchall()\n43      return jsonify([dict(r) for r in rows])"
+}
