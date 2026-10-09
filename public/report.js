@@ -48,8 +48,10 @@ async function repoMap() {
     const { svg } = await mermaidMod.render("rm-svg-" + Date.now(), lines.join("\n"))
     const wrap = $("#rm-diagram")
     wrap.replaceChildren()
-    const doc = new DOMParser().parseFromString(svg, "image/svg+xml")
-    wrap.append(document.adoptNode(doc.documentElement))
+    // Mermaid's SVG can contain HTML line breaks, so parse it as HTML and lift out the <svg>.
+    const doc = new DOMParser().parseFromString(svg, "text/html")
+    const node = doc.querySelector("svg")
+    if (node) wrap.append(document.adoptNode(node))
   } catch (e) { console.warn("repo map", e.message) }
 }
 const seenIssues = new Set()
