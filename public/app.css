@@ -80,7 +80,8 @@ p { margin: 0; }
 .meta b { color: var(--ink-2); font-weight: 500; }
 
 .grid-wrap { background: var(--panel); border-radius: var(--radius); padding: 10px 14px 14px; overflow: auto; }
-.grid { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
+.grid { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0 6px; }
+.grid th:first-child, .grid td.team { width: 22%; }
 .grid th { font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; font-size: 15px; color: var(--ink-3); text-align: left; padding: 6px 10px 2px; }
 .grid th:first-child { font-size: 15px; }
 .grid td { padding: 0 4px; }

@@ -22,7 +22,7 @@ app.use(express.json({ limit: "16kb" }))
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff")
   res.setHeader("Referrer-Policy", "no-referrer")
-  res.setHeader("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; style-src-elem 'self' https://fonts.googleapis.com 'unsafe-inline'")
+  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'")
   next()
 })
 app.use(express.static("public", { extensions: ["html"] }))
