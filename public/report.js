@@ -1,7 +1,14 @@
 import { $, el, params, getJSON, header, sevChip, statusChip, copyButton, when, CLASS_LABEL, bars, SEV_COLOR, CLASS_COLOR } from "./app.js"
 $("#hdr").replaceWith(header())
 const scan = params.get("scan"), t = params.get("t"), t_ = t
-const STAGE_WORD = { queued: "Queued", cloning: "Cloning", scanning: "Scanning", triaging: "Triaging", planning: "Planning", fixing: "Fixing", verifying: "Verifying", done: "Done", error: "Stopped" }
+const STAGE_WORD = { queued: "Queued", cloning: "Cloning", scanning: "Scanning", triaging: "Triaging", planning: "Planning", fixing: "Fixing", verifying: "Verifying", done: "Done", error: "Stopped", waiting: "Waiting for you" }
+const RUN_WORD = { triage: "Run triage", plan: "Write the fix plan", fix: "Fix and verify" }
+const WAIT_STAGE = { triage: "triaging", plan: "planning", fix: "fixing" }
+$("#run").addEventListener("click", async () => {
+  const b = $("#run"); b.disabled = true; b.textContent = "Starting…"
+  try { await getJSON(`api/scans/${encodeURIComponent(scan)}/continue?t=${encodeURIComponent(t)}`, { method: "POST" }) } catch (e) { b.textContent = e.message; b.disabled = false; return }
+  setTimeout(load, 400)
+})
 const ORDER = ["cloning", "scanning", "triaging", "planning", "fixing", "verifying", "done"]
 let timer
 let startedAt = null
@@ -66,7 +73,7 @@ function renderTracker(events, status) {
     cur.ms = Math.max(cur.ms, Number(e.duration_ms) || 0)
     byStage.set(e.stage, cur)
   }
-  const current = status.stage === "verifying" ? "fixing" : status.stage
+  const current = status.stage === "verifying" ? "fixing" : status.stage === "waiting" ? WAIT_STAGE[status.detail] || status.stage : status.stage
   const idx = ORDER.indexOf(current)
   const finished = status.stage === "done" || status.stage === "error"
   for (const li of document.querySelectorAll("#tracker li")) {
@@ -131,8 +138,12 @@ async function load() {
   if (d.events.some((e) => e.stage === "scanning")) repoMap()
   const fixingNow = d.events.find((e) => e.stage === "fixing" && e.detail.startsWith("fixing ") && e.detail.includes(":"))
   const fixingKey = fixingNow && st.stage !== "done" ? fixingNow.detail.slice(7) : null
-  $("#stage-word").textContent = STAGE_WORD[st.stage] || st.stage
-  $("#stage-detail").textContent = st.detail && st.stage !== "done" ? st.detail : st.stage === "done" ? "Everything below is final. Rescan any time." : ""
+  const waiting = d.waiting
+  $("#stage-word").textContent = waiting ? "Waiting for you" : STAGE_WORD[st.stage] || st.stage
+  $("#stage-detail").textContent = waiting ? ({ triage: "Semgrep is done. Ask the triage agent which findings are real.", plan: "Triage is done. Ask the planner for an ordered fix plan.", fix: "Plan is ready. Let the fixer patch our copy and prove each change." })[waiting] : st.detail && st.stage !== "done" ? st.detail : st.stage === "done" ? "Everything below is final. Rescan any time." : ""
+  const run = $("#run")
+  if (waiting) { run.hidden = false; run.disabled = false; run.textContent = RUN_WORD[waiting] || "Run" } else run.hidden = true
+  $("#stage").classList.toggle("waiting", !!waiting)
   $("#stage").className = `stage-line ${st.stage === "done" ? "done" : st.stage === "error" ? "error" : ""}`
   if (st.stage === "done" || st.stage === "error") clearInterval(timer)
 

@@ -16,6 +16,7 @@
     <div class="field"><label for="team">Team name</label><input id="team" type="text" maxlength="60" autocomplete="organization" placeholder="Night Owls" required></div>
     <div class="field"><label for="repo">Public GitHub repo link</label><input id="repo" type="url" inputmode="url" placeholder="https://github.com/owner/repo" required><span class="hint">Public repos only. We clone a shallow copy and never run your code.</span></div>
     <label class="check"><input id="pub" type="checkbox"><span>Show our team name on the public board</span></label>
+    <label class="check"><input id="guided" type="checkbox"><span>Guided mode: pause before triage, plan, and fix so I can run each step myself</span></label>
     <p class="consent">We clone your repo, scan it, and send short code excerpts with secrets masked to an AI model to explain and fix what we find. Your report is private. Your team name appears on the public board only if you tick the box. We delete our copy when the event ends.</p>
     <div class="form-actions"><button class="btn" id="go" type="submit">Scan my repo</button><span id="msg" aria-live="polite"></span></div>
   </form>

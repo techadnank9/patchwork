@@ -14,7 +14,8 @@ import { fixAndVerify } from "./lib/verify.mjs"
 const run = promisify(execFile)
 const env = (k, d) => (process.env[k] ? Number(process.env[k]) : d)
 
-export async function runScan({ scan_id, team, repo_url, is_public = 0, source = "room", agents = true, fix = true, local_dir = null, log = console.log }) {
+// gate(stage): when given (guided mode), resolves only when a person clicks "run" for that stage.
+export async function runScan({ scan_id, team, repo_url, is_public = 0, source = "room", agents = true, fix = true, local_dir = null, gate = null, log = console.log }) {
   const repo = local_dir ? repo_url : validateRepoUrl(repo_url)
   const totals = { findings: 0, triaged: 0, real: 0, noise: 0, verified: 0, failed: 0, needs_human: 0 }
   const event = (stage, detail, duration_ms = 0) => {
@@ -59,6 +60,7 @@ export async function runScan({ scan_id, team, repo_url, is_public = 0, source =
     }
 
     // Triage
+    if (gate) { event("waiting", "triage"); await gate("triage") }
     t = Date.now()
     const toTriage = findings.slice(0, env("MAX_TRIAGE_PER_REPO", 15))
     event("triaging", `triaging ${toTriage.length} of ${findings.length}`)
@@ -102,6 +104,7 @@ export async function runScan({ scan_id, team, repo_url, is_public = 0, source =
     const real = verdicts.filter((v) => v.verdict === "real")
     const byId = new Map(findings.map((f) => [f.finding_id, f]))
     if (real.length > 0) {
+      if (gate) { event("waiting", "plan"); await gate("plan") }
       t = Date.now()
       event("planning", `planning ${real.length} issues`)
       try {
@@ -128,6 +131,7 @@ export async function runScan({ scan_id, team, repo_url, is_public = 0, source =
       for (const v of real) if (!seen.has(v.finding_id)) { seen.add(v.finding_id); order.push(v.finding_id) }
       const realById = new Map(real.map((v) => [v.finding_id, v]))
       const targets = order.filter((id) => realById.has(id)).slice(0, env("MAX_FIX_PER_REPO", 5))
+      if (gate) { event("waiting", "fix"); await gate("fix") }
       t = Date.now()
       event("fixing", `fixing up to ${targets.length} issues`)
       for (const id of targets) {

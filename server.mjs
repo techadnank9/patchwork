@@ -30,6 +30,10 @@ app.use(express.static("public", { extensions: ["html"] }))
 // ---------- queue ----------
 const queue = []
 const active = new Map() // repo_url -> scan_id
+const gates = new Map() // scan_id -> { stage, resolve }
+function gateFor(scan_id) {
+  return (stage) => new Promise((resolve) => gates.set(scan_id, { stage, resolve }))
+}
 const stageOf = new Map() // scan_id -> { stage, detail }
 let running = 0
 
@@ -43,7 +47,7 @@ function pump() {
     const job = queue.shift()
     running++
     active.set(job.repo_url, job.scan_id)
-    runScan({ ...job, log: (...a) => console.log(...a) })
+    runScan({ ...job, gate: job.guided ? gateFor(job.scan_id) : null, log: (...a) => console.log(...a) })
       .catch((e) => console.error(`[scan ${job.scan_id.slice(0, 8)}] failed: ${e.message}`))
       .finally(() => {
         running--
@@ -72,13 +76,14 @@ app.post("/api/scans", async (req, res) => {
     if (!team) return res.status(400).json({ error: "Team name is required" })
     const repo_url = validateRepoUrl(String(req.body?.repo_url || ""))
     const is_public = req.body?.is_public ? 1 : 0
+    const guided = req.body?.guided ? true : false
     if (active.has(repo_url) || queue.some((j) => j.repo_url === repo_url)) {
       return res.status(409).json({ error: "That repo is already being scanned. Wait for it to finish." })
     }
     const scan_id = randomUUID()
     const token = randomBytes(16).toString("hex")
     await insertNow("scans", { scan_id, token, team, repo_url, is_public, source: "room" })
-    enqueue({ scan_id, team, repo_url, is_public, source: "room" })
+    enqueue({ scan_id, team, repo_url, is_public, source: "room", guided })
     res.json({ scan_id, report_url: `${BASE}/report.html?scan=${scan_id}&t=${token}` })
   } catch (e) {
     res.status(400).json({ error: e.message })
@@ -164,8 +169,10 @@ app.get("/api/scans/:id", async (req, res) => {
     const latest = events.rows[0]
     let planObj = null
     try { planObj = plan.rows[0] ? JSON.parse(plan.rows[0].plan_json) : null } catch {}
+    const waiting = gates.get(scan_id)?.stage || null
     res.json({
       scan,
+      waiting,
       status: latest ? { stage: latest.stage, detail: latest.detail, ts: latest.ts } : live || { stage: "queued", detail: "" },
       events: events.rows,
       plan: planObj,
@@ -248,6 +255,21 @@ app.get("/api/scans/:id/patch", async (req, res) => {
     res.type("text/plain").send(patch)
   } catch (e) {
     res.status(500).type("text/plain").send(e.message)
+  }
+})
+
+// Guided mode: a person releases the next stage.
+app.post("/api/scans/:id/continue", async (req, res) => {
+  try {
+    const scan = await authScan(req, res)
+    if (!scan) return res.status(404).json({ error: "Not found" })
+    const g = gates.get(scan.scan_id)
+    if (!g) return res.status(409).json({ error: "Nothing is waiting" })
+    gates.delete(scan.scan_id)
+    g.resolve()
+    res.json({ released: g.stage })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
   }
 })
 
