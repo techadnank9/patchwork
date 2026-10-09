@@ -33,6 +33,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--ink);
@@ -323,3 +324,45 @@ details .issues { margin-top: 12px; }
   .pulse .n { font-size: 40px; }
   .twoup { grid-template-columns: 1fr; gap: 28px; }
 }
+
+
+/* ---------- live process view (report) ---------- */
+.stage-line .elapsed { margin-left: auto; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.tracker { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.tracker li { position: relative; padding: 10px 10px 8px; border-radius: 10px; background: var(--panel); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.tracker li::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--line-2); }
+.tracker .k { font-family: var(--display); font-weight: 600; font-size: 17px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+.tracker .v { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; min-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tracker li.done::before { background: var(--green); }
+.tracker li.done .k { color: var(--ink); }
+.tracker li.done .v { color: var(--green); }
+.tracker li.active::before { background: linear-gradient(90deg, var(--amber) 0 40%, transparent 40% 60%, var(--amber) 60%); background-size: 200% 100%; animation: march 1.2s linear infinite; }
+.tracker li.active { background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+.tracker li.active .k { color: var(--amber); }
+.tracker li.active .v { color: var(--ink-2); }
+.tracker li.error::before { background: var(--red); }
+.tracker li.skipped { opacity: 0.45; }
+@keyframes march { from { background-position: 0 0; } to { background-position: -200% 0; } }
+.activity { margin-top: 14px; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px 6px; }
+.activity-head { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin-bottom: 4px; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(79,211,138,0.5); animation: pulse-g 1.6s ease-out infinite; }
+@keyframes pulse-g { 0% { box-shadow: 0 0 0 0 rgba(79,211,138,0.55); } 100% { box-shadow: 0 0 0 10px rgba(79,211,138,0); } }
+.activity ol { list-style: none; margin: 0; padding: 0; max-height: 180px; overflow: auto; font-family: var(--mono); font-size: 13px; }
+.activity li { display: grid; grid-template-columns: 70px 76px 1fr auto; gap: 10px; padding: 4px 0; border-top: 1px solid var(--line); animation: rise 420ms var(--ease) both; }
+.activity li:first-child { border-top: 0; }
+.activity .t { color: var(--ink-3); }
+.activity .st { color: var(--amber); }
+.activity li.s-done .st, .activity li.s-verifying .st { color: var(--green); }
+.activity li.s-error .st { color: var(--red); }
+.activity .d { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.activity .ms { color: var(--ink-3); }
+.counts .n.bump { animation: bump 500ms var(--ease); }
+@keyframes bump { 0% { transform: translateY(6px) scale(0.92); opacity: 0.4; } 100% { transform: none; opacity: 1; } }
+.issues li.enter { animation: slide-in 560ms var(--ease) both; }
+@keyframes slide-in { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+.issues li.fixing a { box-shadow: inset 0 0 0 1px var(--amber); background: #1f1a10; }
+.chip.working { background: var(--amber); color: var(--amber-ink); }
+.spin { width: 11px; height: 11px; border-radius: 50%; border: 2px solid rgba(26,19,4,0.3); border-top-color: var(--amber-ink); animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 800px) { .tracker { grid-template-columns: repeat(4, 1fr); } .activity li { grid-template-columns: 60px 1fr; } .activity .ms, .activity .st { display: none; } }
+@media (prefers-reduced-motion: reduce) { .tracker li.active::before, .live-dot, .spin, .counts .n.bump, .issues li.enter { animation: none; } }

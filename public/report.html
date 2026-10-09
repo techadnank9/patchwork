@@ -12,7 +12,17 @@
 <main class="doc" id="main">
   <h1 id="team">Loading…</h1>
   <p class="sub"><span class="repo" id="repo"></span><span id="created"></span></p>
-  <div class="stage-line" id="stage"><span class="dot"></span><b id="stage-word">Queued</b><span id="stage-detail"></span></div>
+  <div class="stage-line" id="stage"><span class="dot"></span><b id="stage-word">Queued</b><span id="stage-detail"></span><span class="elapsed" id="elapsed"></span></div>
+  <ol class="tracker" id="tracker" aria-label="Pipeline stages">
+    <li data-stage="cloning"><span class="k">Clone</span><span class="v"></span></li>
+    <li data-stage="scanning"><span class="k">Scan</span><span class="v"></span></li>
+    <li data-stage="triaging"><span class="k">Triage</span><span class="v"></span></li>
+    <li data-stage="planning"><span class="k">Plan</span><span class="v"></span></li>
+    <li data-stage="fixing"><span class="k">Fix</span><span class="v"></span></li>
+    <li data-stage="verifying"><span class="k">Verify</span><span class="v"></span></li>
+    <li data-stage="done"><span class="k">Done</span><span class="v"></span></li>
+  </ol>
+  <div class="activity" id="activity"><div class="activity-head"><span class="live-dot"></span>Activity</div><ol id="log"></ol></div>
   <div class="counts">
     <div class="real"><span class="n" id="c-real">0</span><span class="l">Real issues</span></div>
     <div class="noise"><span class="n" id="c-noise">0</span><span class="l">Noise ruled out</span></div>

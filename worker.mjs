@@ -134,6 +134,7 @@ export async function runScan({ scan_id, team, repo_url, is_public = 0, source =
         const f = byId.get(id)
         const v = realById.get(id)
         const t2 = Date.now()
+        event("fixing", `fixing ${f.path}:${f.line}`)
         try {
           const outcome = await fixAndVerify({ dir, finding: f, verdict: v, scan_id, log })
           if (outcome) {
