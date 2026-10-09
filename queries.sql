@@ -65,6 +65,7 @@ WHERE status = 'verified';
 SELECT e.ts AS ts, if(s.is_public = 1, e.team, 'A team') AS team, e.stage AS stage, e.detail AS detail, e.duration_ms AS duration_ms
 FROM pipeline_events AS e
 INNER JOIN scans AS s ON s.scan_id = e.scan_id
+WHERE s.source = 'room'
 ORDER BY e.ts DESC
 LIMIT 30;
 

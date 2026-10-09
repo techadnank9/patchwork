@@ -14,8 +14,8 @@ import { fixAndVerify } from "./lib/verify.mjs"
 const run = promisify(execFile)
 const env = (k, d) => (process.env[k] ? Number(process.env[k]) : d)
 
-export async function runScan({ scan_id, team, repo_url, is_public = 0, source = "room", agents = true, fix = true, log = console.log }) {
-  const repo = validateRepoUrl(repo_url)
+export async function runScan({ scan_id, team, repo_url, is_public = 0, source = "room", agents = true, fix = true, local_dir = null, log = console.log }) {
+  const repo = local_dir ? repo_url : validateRepoUrl(repo_url)
   const totals = { findings: 0, triaged: 0, real: 0, noise: 0, verified: 0, failed: 0, needs_human: 0 }
   const event = (stage, detail, duration_ms = 0) => {
     insert("pipeline_events", { scan_id, team, stage, detail, duration_ms: Math.round(duration_ms) })
@@ -25,10 +25,10 @@ export async function runScan({ scan_id, team, repo_url, is_public = 0, source =
   try {
     // Clone
     let t = Date.now()
-    event("cloning", `cloning ${repoSlug(repo)}`)
-    const clone = await cloneRepo(repo, scan_id)
+    event("cloning", `cloning ${local_dir ? repo : repoSlug(repo)}`)
+    const clone = local_dir ? await importLocal(local_dir, scan_id) : await cloneRepo(repo, scan_id)
     dir = clone.dir
-    event("cloning", `cloned ${repoSlug(repo)} at ${clone.sha.slice(0, 7)}, ${Math.round(clone.bytes / 1024)} KB`, Date.now() - t)
+    event("cloning", `cloned ${local_dir ? repo : repoSlug(repo)} at ${clone.sha.slice(0, 7)}, ${Math.round(clone.bytes / 1024)} KB`, Date.now() - t)
 
     // Scan
     t = Date.now()
@@ -54,7 +54,7 @@ export async function runScan({ scan_id, team, repo_url, is_public = 0, source =
     await flush()
 
     if (!agents || findings.length === 0) {
-      event("done", JSON.stringify(totals))
+      event("done", summary(totals))
       return { scan_id, dir, sha: clone.sha, totals, findings, verdicts: [], plan: null, fixes: [] }
     }
 
@@ -109,7 +109,7 @@ export async function runScan({ scan_id, team, repo_url, is_public = 0, source =
           const f = byId.get(v.finding_id)
           return { finding_id: v.finding_id, rule_id: f.rule_id, path: f.path, line: f.line, severity: v.severity, bug_class: v.bug_class, title: v.title, why: v.why, fix_hint: v.fix_hint }
         })
-        const res = await runAgent("planner", { team, repo: repoSlug(repo), findings_json: JSON.stringify(issues) })
+        const res = await runAgent("planner", { team, repo: local_dir ? repo : repoSlug(repo), findings_json: JSON.stringify(issues) })
         plan = parsePlan(res.events)
         if (!plan) log("[plan] no plan parsed; events:", JSON.stringify(res.events).slice(0, 1500))
         else insert("plans", { scan_id, plan_json: JSON.stringify(plan), session_url: res.session_url || "", latency_ms: res.latency_ms })
@@ -150,7 +150,7 @@ export async function runScan({ scan_id, team, repo_url, is_public = 0, source =
       event("fixing", `${totals.verified} verified`, Date.now() - t)
     }
 
-    event("done", JSON.stringify(totals))
+    event("done", summary(totals))
     await flush()
     return { scan_id, dir, sha: clone.sha, totals, findings, verdicts, plan, fixes }
   } catch (e) {
@@ -158,6 +158,26 @@ export async function runScan({ scan_id, team, repo_url, is_public = 0, source =
     await flush()
     throw e
   }
+}
+
+// Test fixtures live in this repo, not on GitHub. Copy one into work/ and give it a git history so diffs work.
+async function importLocal(src, scan_id) {
+  const dir = path.join(WORK_DIR, scan_id)
+  await run("mkdir", ["-p", WORK_DIR])
+  await run("cp", ["-R", src, dir])
+  await run("git", ["init", "-q"], { cwd: dir })
+  await run("git", ["-c", "user.name=Patchwork", "-c", "user.email=desk@localhost", "add", "-A"], { cwd: dir })
+  await run("git", ["-c", "user.name=Patchwork", "-c", "user.email=desk@localhost", "commit", "-qm", "fixture"], { cwd: dir })
+  const { stdout } = await run("git", ["rev-parse", "HEAD"], { cwd: dir })
+  return { dir, sha: stdout.trim(), bytes: 0 }
+}
+
+function summary(t) {
+  const parts = [`${t.findings} finding${t.findings === 1 ? "" : "s"}`]
+  if (t.triaged) parts.push(`${t.real} real`, `${t.noise} noise`)
+  if (t.verified) parts.push(`${t.verified} verified fix${t.verified === 1 ? "" : "es"}`)
+  if (t.needs_human) parts.push(`${t.needs_human} need a human`)
+  return parts.join(", ")
 }
 
 function clean(value, allowed, fallback) {
@@ -179,12 +199,15 @@ async function parallel(items, limit, fn) {
 if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
   const args = process.argv.slice(2)
   const flags = new Set(args.filter((a) => a.startsWith("--")))
-  const positional = args.filter((a) => !a.startsWith("--") && args[args.indexOf(a) - 1] !== "--source")
+  const positional = args.filter((a, i) => !a.startsWith("--") && !["--source", "--local"].includes(args[i - 1]))
   const sourceIdx = args.indexOf("--source")
-  const source = sourceIdx >= 0 ? args[sourceIdx + 1] : "room"
-  const [repo_url, team = "Me"] = positional
+  const localIdx = args.indexOf("--local")
+  const local_dir = localIdx >= 0 ? path.resolve(args[localIdx + 1]) : null
+  const source = sourceIdx >= 0 ? args[sourceIdx + 1] : local_dir ? "fixture" : "room"
+  const repo_url = local_dir ? `fixture://${path.basename(local_dir)}` : positional[0]
+  const team = (local_dir ? positional[0] : positional[1]) || "Me"
   if (!repo_url) {
-    console.error('usage: node --env-file=.env worker.mjs <repo_url> "<team>" [--no-agents] [--no-fix] [--source fixture] [--public]')
+    console.error('usage: node --env-file=.env worker.mjs <repo_url> "<team>" [--no-agents] [--no-fix] [--source fixture] [--public]  |  --local fixtures/vuln-app "<team>"')
     process.exit(1)
   }
   const scan_id = randomUUID()
@@ -192,7 +215,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url
   await insertNow("scans", { scan_id, token, team, repo_url, is_public: flags.has("--public") ? 1 : 0, source })
   console.log(`scan_id ${scan_id}`)
   try {
-    const out = await runScan({ scan_id, team, repo_url, is_public: flags.has("--public") ? 1 : 0, source, agents: !flags.has("--no-agents"), fix: !flags.has("--no-fix") })
+    const out = await runScan({ scan_id, team, repo_url, is_public: flags.has("--public") ? 1 : 0, source, local_dir, agents: !flags.has("--no-agents"), fix: !flags.has("--no-fix") })
     console.log("totals", out.totals)
     const { rows } = await query("SELECT count() AS n FROM findings WHERE scan_id = {scan_id:String}", { scan_id })
     console.log(`findings rows in ClickHouse for this scan: ${rows[0].n}`)
