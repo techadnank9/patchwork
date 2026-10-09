@@ -6,13 +6,18 @@ SELECT
   s.team                                                        AS team,
   v.bug_class                                                   AS bug_class,
   countIf(v.verdict = 'real')                                   AS real_issues,
-  countIf(v.verdict = 'real' AND f.finding_id != '')            AS patch_ready,
+  countIf(v.verdict = 'real' AND (f.finding_id != '' OR pf.path != ''))  AS patch_ready,  -- own verified fix, or covered by a verified fix in the same file
   minIf(multiIf(v.severity = 'high', 1, v.severity = 'medium', 2, 3),
-        v.verdict = 'real' AND f.finding_id = '')               AS worst_open  -- 0 none, 1 high, 2 medium, 3 low
+        v.verdict = 'real' AND f.finding_id = '' AND pf.path = '')       AS worst_open  -- 0 none, 1 high, 2 medium, 3 low
 FROM verdicts AS v
 INNER JOIN scans AS s ON s.scan_id = v.scan_id
+INNER JOIN findings AS fnd ON fnd.finding_id = v.finding_id
 LEFT JOIN (SELECT DISTINCT finding_id FROM fixes WHERE status = 'verified') AS f
        ON f.finding_id = v.finding_id
+LEFT JOIN (SELECT DISTINCT fi.scan_id AS scan_id, fi.path AS path
+           FROM fixes AS fx INNER JOIN findings AS fi ON fi.finding_id = fx.finding_id
+           WHERE fx.status = 'verified') AS pf
+       ON pf.scan_id = v.scan_id AND pf.path = fnd.path
 WHERE s.is_public = 1
   AND s.source = 'room'
   AND v.scan_id IN (SELECT scan_id FROM latest_room_scans)
