@@ -1,0 +1,19 @@
+{
+  "name": "patchwork",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Found, fixed, proven. A free opt-in security desk for a hackathon room: Semgrep finds, Guild agents triage/plan/fix, every patch is verified by rescan, ClickHouse keeps the room's memory.",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node --env-file=.env server.mjs",
+    "init-db": "node --env-file=.env scripts/init-db.mjs",
+    "worker": "node --env-file=.env worker.mjs",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "@clickhouse/client": "^1.11.0",
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4"
+  }
+}
