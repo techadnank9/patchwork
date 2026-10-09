@@ -185,7 +185,7 @@ async function load() {
     const isFixing = fixingKey && `${i.path}:${i.line}` === fixingKey && i.fix?.status !== "verified"
     return el("li", { class: `${isNew ? "enter" : ""} ${isFixing ? "fixing" : ""}` }, el("a", { href: link(i) },
       el("span", { class: "t" }, el("span", { text: i.title }), sevChip(i.severity), el("span", { class: "chip noise", text: CLASS_LABEL[i.bug_class] || i.bug_class })),
-      el("span", { class: "status" }, isFixing ? el("span", { class: "chip working" }, el("span", { class: "spin" }), "Fixing now") : statusChip(i)),
+      el("span", { class: "status" }, isFixing ? el("span", { class: "chip working" }, el("span", { class: "spin" }), "Fixing now") : statusChip(i), i.pr_url ? el("a", { class: "chip fixed prlink", href: i.pr_url, target: "_blank", rel: "noopener", text: "PR #" + i.pr_url.split("/").pop() }) : null),
       el("span", { class: "why" }, el("span", { class: "loc", text: `${i.path}:${i.line}  ` }), i.why),
     ))
   }))
@@ -197,6 +197,20 @@ async function load() {
 
   if (d.patch_available) {
     $("#actions").hidden = false; $("#verify-note").hidden = false
+    const prAll = $("#pr-all")
+    if (d.pr_possible && !prAll.dataset.wired) {
+      prAll.hidden = false; prAll.dataset.wired = "1"
+      prAll.addEventListener("click", async () => {
+        prAll.disabled = true; prAll.textContent = "Opening pull requests…"; $("#pr-msg").textContent = ""
+        try {
+          const r = await getJSON(`api/scans/${encodeURIComponent(scan)}/pr?t=${encodeURIComponent(t)}`, { method: "POST" })
+          const ok = r.results.filter((x) => x.ok).length
+          $("#pr-msg").textContent = `${ok} of ${r.results.length} pull request${r.results.length === 1 ? "" : "s"} opened${r.results.some((x) => !x.ok) ? ". " + r.results.filter((x) => !x.ok).map((x) => `${x.path}: ${x.error}`).join("; ") : "."}`
+          prAll.textContent = "Pull requests opened"
+          load()
+        } catch (e) { $("#pr-msg").textContent = e.message; prAll.disabled = false; prAll.textContent = "Open a pull request for each fix" }
+      })
+    }
     $("#dl").href = `api/scans/${encodeURIComponent(scan)}/patch?t=${encodeURIComponent(t)}`
     if (!$("#cmd button")) $("#cmd").append(copyButton("git apply patchwork.patch"))
   }

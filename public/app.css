@@ -425,3 +425,6 @@ details .issues { margin-top: 12px; }
 .stage-line.waiting .dot { background: var(--amber); animation: pulse 1.6s ease-out infinite; }
 @keyframes pulse-amber { 0% { box-shadow: 0 0 0 0 rgba(242,179,61,0.5); } 100% { box-shadow: 0 0 0 12px rgba(242,179,61,0); } }
 .tracker li.active.wait .k { color: var(--amber); }
+
+.issues .status { display: flex; gap: 6px; align-items: center; }
+.prlink { text-decoration: none; }

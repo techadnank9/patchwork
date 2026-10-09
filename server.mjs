@@ -8,6 +8,7 @@ import path from "node:path"
 import { insertNow, query, flush } from "./lib/db.mjs"
 import { validateRepoUrl, WORK_DIR } from "./lib/repo.mjs"
 import { runScan } from "./worker.mjs"
+import { openPullRequests } from "./lib/pr.mjs"
 
 const run = promisify(execFile)
 const PORT = Number(process.env.PORT || 3000)
@@ -170,6 +171,9 @@ app.get("/api/scans/:id", async (req, res) => {
     let planObj = null
     try { planObj = plan.rows[0] ? JSON.parse(plan.rows[0].plan_json) : null } catch {}
     const waiting = gates.get(scan_id)?.stage || null
+    const prs = {}
+    for (const e of events.rows) if (e.stage === "pr") { const [fix_id, url] = e.detail.split(" "); if (!prs[fix_id]) prs[fix_id] = url }
+    for (const i of all) if (i.fix && prs[i.fix.fix_id]) i.pr_url = prs[i.fix.fix_id]
     res.json({
       scan,
       waiting,
@@ -181,6 +185,7 @@ app.get("/api/scans/:id", async (req, res) => {
       noise: all.filter((i) => i.verdict === "noise"),
       findings_total: Number(findingsCount),
       patch_available: fixes.rows.some((f) => f.status === "verified"),
+      pr_possible: Boolean(process.env.GITHUB_TOKEN) && /^https:\/\/github\.com\//.test(scan.repo_url),
     })
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -268,6 +273,27 @@ app.post("/api/scans/:id/continue", async (req, res) => {
     gates.delete(scan.scan_id)
     g.resolve()
     res.json({ released: g.stage })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// One pull request per verified fix (?fix=<fix_id> for a single one). Branches go to our fork,
+// or to the repo itself when it belongs to the token's account. Never to another team's repo.
+const prLocks = new Set()
+app.post("/api/scans/:id/pr", async (req, res) => {
+  try {
+    const scan = await authScan(req, res)
+    if (!scan) return res.status(404).json({ error: "Not found" })
+    if (prLocks.has(scan.scan_id)) return res.status(409).json({ error: "Already opening pull requests for this scan" })
+    prLocks.add(scan.scan_id)
+    try {
+      const dir = path.join(WORK_DIR, scan.scan_id)
+      const results = await openPullRequests({ scan, dir, base_url: `${BASE}/report.html?scan=${scan.scan_id}&t=${String(req.query.t)}`, only: req.query.fix ? String(req.query.fix) : null })
+      res.json({ results })
+    } finally {
+      prLocks.delete(scan.scan_id)
+    }
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
