@@ -1,4 +1,4 @@
-import { $, el, params, getJSON, header, sevChip, statusChip, copyButton, when, CLASS_LABEL } from "./app.js"
+import { $, el, params, getJSON, header, sevChip, statusChip, copyButton, when, CLASS_LABEL, bars, SEV_COLOR, CLASS_COLOR } from "./app.js"
 $("#hdr").replaceWith(header())
 const scan = params.get("scan"), t = params.get("t")
 const STAGE_WORD = { queued: "Queued", cloning: "Cloning", scanning: "Scanning", triaging: "Triaging", planning: "Planning", fixing: "Fixing", verifying: "Verifying", done: "Done", error: "Stopped" }
@@ -32,7 +32,7 @@ function renderTracker(events, status) {
     const v = li.querySelector(".v")
     if (state === "active") {
       const live = info ? Math.max(0, (Date.now() - info.first) / 1000) : 0
-      v.textContent = status.stage === "triaging" || status.stage === "fixing" || status.stage === "verifying" ? status.detail.replace(/^\w+ /, "") : `${live.toFixed(0)} s`
+      v.textContent = status.detail ? status.detail.replace(/^(cloning|cloned|running|triaging|triaged|planning|fixing|verifying) ?/, "") || `${live.toFixed(0)} s` : `${live.toFixed(0)} s`
     } else if (state === "done" && info && info.ms) v.textContent = info.ms >= 1000 ? `${(info.ms / 1000).toFixed(1)} s` : `${info.ms} ms`
     else if (state === "skipped") v.textContent = "skipped"
     else v.textContent = ""
@@ -89,6 +89,16 @@ async function load() {
   const ready = d.issues.filter((i) => i.fix?.status === "verified").length
   tick(d.issues.length, "#c-real"); tick(d.noise.length, "#c-noise"); tick(ready, "#c-ready"); tick(d.findings_total, "#c-findings")
 
+  if (d.issues.length) {
+    $("#graph-sec").hidden = false
+    const byClass = {}, bySev = {}
+    for (const i of d.issues) { byClass[i.bug_class] = (byClass[i.bug_class] || 0) + 1; bySev[i.severity] = (bySev[i.severity] || 0) + 1 }
+    $("#g-class").replaceChildren(bars(byClass, { colorFor: (k) => CLASS_COLOR[k] || "var(--gray)", labelFor: (k) => CLASS_LABEL[k] || k }))
+    $("#g-sev").replaceChildren(bars(bySev, { colorFor: (k) => SEV_COLOR[k] || "var(--gray)", labelFor: (k) => ({ high: "High", medium: "Medium", low: "Low" })[k] || k }))
+    const top = Object.entries(byClass).sort((a, b) => b[1] - a[1])[0]
+    const highs = bySev.high || 0
+    $("#g-note").replaceChildren(el("b", { text: `Patch order: ` }), d.plan ? `follow the ${d.plan.steps?.length || 0} steps below, top to bottom. ` : "the plan appears as soon as the planner finishes. ", highs ? `${highs} high severity issue${highs === 1 ? "" : "s"} first; ` : "", top ? `most of the risk is ${CLASS_LABEL[top[0]] || top[0]} (${top[1]} issue${top[1] === 1 ? "" : "s"}).` : "")
+  }
   if (d.plan) {
     $("#plan-sec").hidden = false
     $("#plan-summary").textContent = d.plan.summary || ""

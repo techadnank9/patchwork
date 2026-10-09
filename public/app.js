@@ -78,3 +78,21 @@ export function header(current) {
     el("nav", { class: "nav" }, ...links.map(([href, label]) => el("a", { href, text: label, "aria-current": current === href ? "page" : undefined }))),
   )
 }
+
+// Horizontal bar chart from {label: count}. Pure DOM, no library. Colors paired with words.
+export function bars(data, { colorFor = () => "var(--amber)", labelFor = (k) => k, total } = {}) {
+  const entries = Object.entries(data).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])
+  const max = Math.max(1, ...entries.map(([, v]) => v))
+  const wrap = el("div", { class: "bars", role: "img", "aria-label": entries.map(([k, v]) => `${labelFor(k)} ${v}`).join(", ") })
+  if (!entries.length) return el("p", { class: "bars-empty", text: "Nothing confirmed yet." })
+  for (const [k, v] of entries) {
+    wrap.append(el("div", { class: "bar-row" },
+      el("span", { class: "bar-k", text: labelFor(k) }),
+      el("span", { class: "bar-track" }, el("span", { class: "bar-fill", style: `width:${Math.round((v / max) * 100)}%;background:${colorFor(k)}` })),
+      el("span", { class: "bar-v", text: String(v) }),
+    ))
+  }
+  return wrap
+}
+export const SEV_COLOR = { high: "var(--red)", medium: "var(--amber)", low: "var(--gray)" }
+export const CLASS_COLOR = { injection: "var(--red)", secrets: "var(--amber)", auth: "var(--blue)", packages: "#c084fc", crypto: "#2dd4bf", other: "var(--gray)" }

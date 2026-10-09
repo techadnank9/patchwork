@@ -224,6 +224,40 @@ app.get("/api/qr", async (req, res) => {
 
 app.get("/api/config", (req, res) => res.json({ base: BASE }))
 
+// Every room project (newest scan per repo). Opted-in teams include their confirmed issues
+// (title, class, severity, path, fix status). Others expose counts only.
+app.get("/api/projects", async (req, res) => {
+  try {
+    const started = performance.now()
+    const { rows: scans } = await query(`SELECT s.scan_id AS scan_id, s.team AS team, s.repo_url AS repo_url, s.is_public AS is_public, s.created_at AS created_at
+      FROM scans AS s WHERE s.scan_id IN (SELECT scan_id FROM latest_room_scans) ORDER BY s.created_at DESC`)
+    const ids = scans.map((x) => x.scan_id)
+    const { rows: issues } = ids.length ? await query(`SELECT f.scan_id AS scan_id, f.finding_id AS finding_id, f.rule_id AS rule_id, f.path AS path, f.line AS line,
+        v.verdict AS verdict, v.severity AS severity, v.bug_class AS bug_class, v.title AS title, v.why AS why, v.fix_hint AS fix_hint
+      FROM findings AS f INNER JOIN verdicts AS v ON v.finding_id = f.finding_id WHERE f.scan_id IN ({ids:Array(String)})`, { ids }) : { rows: [] }
+    const { rows: fixes } = ids.length ? await query(`SELECT finding_id, argMax(status, ts) AS status, argMax(memory_hit, ts) AS memory_hit FROM fixes WHERE scan_id IN ({ids:Array(String)}) GROUP BY finding_id`, { ids }) : { rows: [] }
+    const { rows: counts } = ids.length ? await query(`SELECT scan_id, count() AS findings FROM findings WHERE scan_id IN ({ids:Array(String)}) GROUP BY scan_id`, { ids }) : { rows: [] }
+    const fixBy = new Map(fixes.map((f) => [f.finding_id, f]))
+    const countBy = new Map(counts.map((c) => [c.scan_id, Number(c.findings)]))
+    const projects = scans.map((sc) => {
+      const mine = issues.filter((i) => i.scan_id === sc.scan_id)
+      const real = mine.filter((i) => i.verdict === "real")
+      const byClass = {}
+      for (const i of real) byClass[i.bug_class] = (byClass[i.bug_class] || 0) + 1
+      const bySev = { high: 0, medium: 0, low: 0 }
+      for (const i of real) bySev[i.severity] = (bySev[i.severity] || 0) + 1
+      const verified = real.filter((i) => fixBy.get(i.finding_id)?.status === "verified").length
+      const base = { team: sc.is_public ? sc.team : "A team", is_public: Number(sc.is_public), repo: sc.is_public ? sc.repo_url.replace("https://github.com/", "") : "", created_at: sc.created_at,
+        findings: countBy.get(sc.scan_id) || 0, real: real.length, noise: mine.length - real.length, verified, by_class: byClass, by_severity: bySev }
+      if (!sc.is_public) return base
+      return { ...base, issues: real.map((i) => ({ title: i.title, severity: i.severity, bug_class: i.bug_class, path: i.path, line: i.line, rule_id: i.rule_id, why: i.why, fix_hint: i.fix_hint, status: fixBy.get(i.finding_id)?.status || "", memory_hit: Number(fixBy.get(i.finding_id)?.memory_hit || 0) })) }
+    })
+    res.json({ projects, query_ms: Math.round((performance.now() - started) * 10) / 10 })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // Landing page numbers: real room totals only, never sample rows.
 app.get("/api/pulse", async (req, res) => {
   try {

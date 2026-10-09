@@ -366,3 +366,47 @@ details .issues { margin-top: 12px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 800px) { .tracker { grid-template-columns: repeat(4, 1fr); } .activity li { grid-template-columns: 60px 1fr; } .activity .ms, .activity .st { display: none; } }
 @media (prefers-reduced-motion: reduce) { .tracker li.active::before, .live-dot, .spin, .counts .n.bump, .issues li.enter { animation: none; } }
+
+
+/* ---------- bars, projects, live room ---------- */
+.bars { display: flex; flex-direction: column; gap: 7px; }
+.bar-row { display: grid; grid-template-columns: 92px 1fr 36px; align-items: center; gap: 10px; font-size: 14px; }
+.bar-k { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { height: 14px; background: var(--bg-2); border-radius: 7px; overflow: hidden; }
+.bar-fill { display: block; height: 100%; border-radius: 7px; transition: width 600ms var(--ease); }
+.bar-v { font-family: var(--display); font-weight: 600; font-size: 20px; text-align: right; }
+.bars-empty { color: var(--ink-3); font-size: 14px; }
+.twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 14px; }
+.twocol h3 { color: var(--ink-3); font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--display); margin-bottom: 10px; }
+.projects { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+.proj { background: var(--panel); border-radius: var(--radius); padding: 16px 18px; }
+.proj-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.proj-head h3 { font-family: var(--display); font-size: 26px; text-transform: uppercase; letter-spacing: 0.02em; }
+.proj-nums { display: flex; gap: 16px; color: var(--ink-2); font-size: 15px; }
+.proj-nums b { font-family: var(--display); font-size: 26px; font-weight: 600; }
+.proj-nums .real { color: var(--red); } .proj-nums .fix { color: var(--blue); }
+.proj-graph { margin-top: 12px; max-width: 480px; }
+.vulns { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.vulns li { background: var(--bg-2); border-radius: 10px; padding: 10px 14px; }
+.v-top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 15px; }
+.v-loc { font-family: var(--mono); font-size: 12.5px; color: var(--ink-3); margin-top: 4px; }
+.v-why { color: var(--ink-2); font-size: 14px; margin-top: 4px; max-width: 80ch; }
+.v-how { color: var(--ink-2); font-size: 14px; margin-top: 4px; max-width: 80ch; }
+.v-how b { color: var(--green); }
+.doc h2 + .hist { margin-top: 14px; }
+.live-room { margin-top: 64px; }
+.live-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.live-head h2 { font-family: var(--display); font-weight: 600; font-size: 34px; text-transform: uppercase; letter-spacing: 0.02em; }
+.live-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+.live-card { background: var(--panel); border-radius: var(--radius); padding: 16px 18px; min-height: 160px; }
+.live-card h3 { font-family: var(--display); font-size: 15px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin-bottom: 10px; }
+.lr-projects, .lr-variants, .lr-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.lr-projects li { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: baseline; }
+.lr-projects .muted { font-family: var(--mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lr-n { display: flex; gap: 10px; font-size: 14px; }
+.lr-variants li { display: flex; justify-content: space-between; gap: 10px; }
+.lr-variants b { color: var(--amber); }
+.lr-feed li { display: grid; grid-template-columns: auto auto auto 1fr; gap: 8px; font-size: 14px; animation: rise 400ms var(--ease) both; }
+.lr-feed li span:last-child { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.muted { color: var(--ink-3); } .red { color: var(--red); } .blue { color: var(--blue); } .amber { color: var(--amber); }
+@media (max-width: 800px) { .twocol, .live-grid { grid-template-columns: 1fr; } }
