@@ -3,51 +3,75 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Patchwork board</title>
-<meta name="description" content="Live security board for the room: findings, verified fixes, variant hunt.">
+<title>Patchwork</title>
+<meta name="description" content="A free, opt-in security check for every team in the room. Found, fixed, proven.">
 <link rel="stylesheet" href="app.css">
 </head>
-<body>
-<div id="banner" class="banner" hidden>Sample data. Nothing on this screen is from a real scan.</div>
+<body class="landing">
 <div id="hdr"></div>
-<main class="board">
-  <section class="stats" aria-label="Room totals">
-    <div class="stat"><span class="n" id="s-projects">0</span><span class="l">Projects checked</span></div>
-    <div class="stat"><span class="n" id="s-findings">0</span><span class="l">Findings scanned</span></div>
-    <div class="stat"><span class="n" id="s-noise">0</span><span class="l">Noise removed</span></div>
-    <div class="stat hot"><span class="n" id="s-real">0</span><span class="l">Real issues</span></div>
-    <div class="stat good"><span class="n" id="s-fixes">0</span><span class="l">Verified fixes</span></div>
-    <div class="stat good"><span class="n" id="s-memory">0</span><span class="l">Memory assisted fixes</span></div>
-    <div class="stat"><span class="n" id="s-median">–</span><span class="l">Median found to fixed, seconds</span></div>
-  </section>
-  <p class="meta"><span>ClickHouse: <b id="m-rows">0</b> rows, last query <b id="m-ms">0</b> ms</span><span id="m-queue"></span><span id="m-agents">Agents on Guild</span></p>
-
-  <section class="grid-wrap" aria-label="Teams by bug class">
-    <table class="grid">
-      <thead><tr><th>Team</th><th>Injection</th><th>Secrets</th><th>Auth</th><th>Packages</th><th>Crypto</th><th>Other</th></tr></thead>
-      <tbody id="rows"><tr class="empty"><td colspan="7">No team has opted onto the board yet. Scan the code to join.</td></tr></tbody>
-    </table>
+<main>
+  <section class="hero">
+    <p class="hero-line">A free security desk for every team in this room.</p>
+    <h1>Found.<br>Fixed.<br>Proven.</h1>
+    <p class="hero-sub">Paste a public GitHub link. Semgrep finds the issues, three agents on Guild sort the real ones from the noise, write a plan, and write the patch. Every patch is applied to our copy and rescanned before you ever see it. Your report is private. The room sees only what you allow.</p>
+    <div class="hero-actions">
+      <a class="btn" href="join.html">Scan my repo</a>
+      <a class="btn quiet" href="board.html">See the live board</a>
+    </div>
   </section>
 
-  <aside class="feed" aria-label="Live feed">
-    <h2>Live</h2>
-    <ol id="feed"></ol>
-  </aside>
+  <section class="pulse" aria-label="Right now in the room">
+    <div><span class="n" id="p-projects">–</span><span class="l">projects checked</span></div>
+    <div><span class="n" id="p-real">–</span><span class="l">real issues confirmed</span></div>
+    <div><span class="n" id="p-noise">–</span><span class="l">false alarms removed</span></div>
+    <div><span class="n" id="p-fixes">–</span><span class="l">fixes verified by rescan</span></div>
+    <div><span class="n" id="p-median">–</span><span class="l">seconds, median found to fixed</span></div>
+  </section>
 
-  <section class="bottom">
-    <div class="side" aria-label="Variant hunt">
+  <section class="how">
+    <h2>What happens to your repo</h2>
+    <ol class="flow">
+      <li><b>Clone</b><span>A shallow copy of your public repo lands on our machine. We never run it.</span></li>
+      <li><b>Scan</b><span>Semgrep's full ruleset reads every file. Vendored and generated code is skipped.</span></li>
+      <li><b>Triage</b><span>A Guild agent reads each finding with the code around it and says real or noise, and why, in plain words.</span></li>
+      <li><b>Plan</b><span>A second agent groups the real issues by root cause and orders them: leaked secrets first, then anything an outsider can reach.</span></li>
+      <li><b>Fix</b><span>A third agent writes the smallest safe change for each issue, one at a time.</span></li>
+      <li><b>Verify</b><span>We apply the change to our copy, check it still parses, and rescan. Only patches that pass get shown.</span></li>
+      <li><b>Report</b><span>You get a private link: the plan, every issue, every verified diff, and one patch file to apply with <code>git apply</code>.</span></li>
+    </ol>
+  </section>
+
+  <section class="twoup">
+    <div>
       <h2>Variant hunt</h2>
-      <p class="big" id="v-head">One bug here leads to the same bug <em>elsewhere</em>.</p>
-      <ul id="variants"><li class="muted">Waiting for the same rule to fire in two projects.</li></ul>
+      <p>When a rule fires as a real issue in one project, we show every other project in the room where the same rule fired. One bug here leads to the same bug in the next team over.</p>
     </div>
-    <div class="side" aria-label="Headline">
-      <h2>Most common flaw AI wrote today</h2>
-      <p class="big" id="headline"><span class="muted">Nothing confirmed yet.</span></p>
-      <ul id="headline-facts"></ul>
+    <div>
+      <h2>Room memory</h2>
+      <p>Every verified fix is remembered by rule. The next time that rule shows up anywhere in the room, the fixer gets the proven fix as an example. Guidance, not copy and paste: each patch is still applied and rescanned on its own.</p>
     </div>
-    <div class="qr"><img id="qr" alt="QR code to the join page" src="api/qr"><p><b>Scan to join</b>Free, opt in, private report. Our copy, never yours.</p></div>
   </section>
+
+  <section class="promise">
+    <h2>What we promise</h2>
+    <ul>
+      <li>Opt in only. We scan a repo when its team submits it, and nothing else.</li>
+      <li>Read only. We never push to your repo, never touch a deployed app.</li>
+      <li>We never execute your code. Clone, read, Semgrep, a parse check, nothing more.</li>
+      <li>Secrets are masked before they are stored, sent to any model, or shown.</li>
+      <li>Your team name appears on the public board only if you tick the box.</li>
+      <li>"Verified by rescan" means the scanner no longer flags the code and the file still parses. It does not prove the app behaves the same. Read every diff.</li>
+      <li>We delete our copy of your repo when the event ends.</li>
+    </ul>
+    <div class="hero-actions"><a class="btn" href="join.html">Scan my repo</a></div>
+  </section>
+
+  <footer class="foot">
+    <span>Built in one afternoon at the Cyberdefense Hackathon, San Francisco.</span>
+    <span>Semgrep finds. Guild runs the agents. ClickHouse keeps the room's memory. Akash hosts it.</span>
+    <a href="https://github.com/techadnank9/patchwork" rel="noopener">Source on GitHub</a>
+  </footer>
 </main>
-<script type="module" src="index.js"></script>
+<script type="module" src="landing.js"></script>
 </body>
 </html>

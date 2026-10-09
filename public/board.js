@@ -1,5 +1,5 @@
 import { $, el, params, getJSON, fmtSecs, fmtN, CLASS_LABEL, header, when } from "./app.js"
-$("#hdr").replaceWith(header("index.html"))
+$("#hdr").replaceWith(header("board.html"))
 const sample = params.get("sample") === "1"
 if (sample) $("#banner").hidden = false
 const CLASSES = ["injection", "secrets", "auth", "packages", "crypto", "other"]

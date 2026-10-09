@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patchwork live board</title>
+<meta name="description" content="Live security board for the room: findings, verified fixes, variant hunt.">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="banner" class="banner" hidden>Sample data. Nothing on this screen is from a real scan.</div>
+<div id="hdr"></div>
+<main class="board">
+  <section class="stats" aria-label="Room totals">
+    <div class="stat"><span class="n" id="s-projects">0</span><span class="l">Projects checked</span></div>
+    <div class="stat"><span class="n" id="s-findings">0</span><span class="l">Findings scanned</span></div>
+    <div class="stat"><span class="n" id="s-noise">0</span><span class="l">Noise removed</span></div>
+    <div class="stat hot"><span class="n" id="s-real">0</span><span class="l">Real issues</span></div>
+    <div class="stat good"><span class="n" id="s-fixes">0</span><span class="l">Verified fixes</span></div>
+    <div class="stat good"><span class="n" id="s-memory">0</span><span class="l">Memory assisted fixes</span></div>
+    <div class="stat"><span class="n" id="s-median">–</span><span class="l">Median found to fixed, seconds</span></div>
+  </section>
+  <p class="meta"><span>ClickHouse: <b id="m-rows">0</b> rows, last query <b id="m-ms">0</b> ms</span><span id="m-queue"></span><span id="m-agents">Agents on Guild</span></p>
+
+  <section class="grid-wrap" aria-label="Teams by bug class">
+    <table class="grid">
+      <thead><tr><th>Team</th><th>Injection</th><th>Secrets</th><th>Auth</th><th>Packages</th><th>Crypto</th><th>Other</th></tr></thead>
+      <tbody id="rows"><tr class="empty"><td colspan="7">No team has opted onto the board yet. Scan the code to join.</td></tr></tbody>
+    </table>
+  </section>
+
+  <aside class="feed" aria-label="Live feed">
+    <h2>Live</h2>
+    <ol id="feed"></ol>
+  </aside>
+
+  <section class="bottom">
+    <div class="side" aria-label="Variant hunt">
+      <h2>Variant hunt</h2>
+      <p class="big" id="v-head">One bug here leads to the same bug <em>elsewhere</em>.</p>
+      <ul id="variants"><li class="muted">Waiting for the same rule to fire in two projects.</li></ul>
+    </div>
+    <div class="side" aria-label="Headline">
+      <h2>Most common flaw AI wrote today</h2>
+      <p class="big" id="headline"><span class="muted">Nothing confirmed yet.</span></p>
+      <ul id="headline-facts"></ul>
+    </div>
+    <div class="qr"><img id="qr" alt="QR code to the join page" src="api/qr"><p><b>Scan to join</b>Free, opt in, private report. Our copy, never yours.</p></div>
+  </section>
+</main>
+<script type="module" src="board.js"></script>
+</body>
+</html>

@@ -224,6 +224,16 @@ app.get("/api/qr", async (req, res) => {
 
 app.get("/api/config", (req, res) => res.json({ base: BASE }))
 
+// Landing page numbers: real room totals only, never sample rows.
+app.get("/api/pulse", async (req, res) => {
+  try {
+    const [totals, speed, hist] = await Promise.all([query(SQL.Q2), query(SQL.Q5), query("SELECT count() AS scans FROM scans WHERE source = 'room'")])
+    res.json({ ...totals.rows[0], median_fix_seconds: speed.rows[0]?.median_fix_seconds ?? null, scans: Number(hist.rows[0]?.scans || 0) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 app.listen(PORT, process.env.HOST || "127.0.0.1", () => console.log(`Patchwork on http://localhost:${PORT}  public: ${BASE}`))
 
 process.on("SIGINT", async () => { await flush().catch(() => {}); process.exit(0) })

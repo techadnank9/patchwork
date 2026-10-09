@@ -288,3 +288,38 @@ details .issues { margin-top: 12px; }
   .flap.flip, .feed li, .stage-line .dot { animation: none; }
   * { transition-duration: 0ms !important; }
 }
+
+/* ---------- landing ---------- */
+.landing main { max-width: 1040px; margin: 0 auto; padding: 0 24px 80px; }
+.hero { padding: 72px 0 40px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 28px 48px; align-items: end; }
+.hero-line { grid-column: 1 / -1; color: var(--amber); font-weight: 600; font-size: 17px; }
+.hero h1 { font-family: var(--display); font-weight: 700; font-size: clamp(72px, 12vw, 160px); line-height: 0.86; letter-spacing: -0.01em; text-transform: uppercase; }
+.hero-sub { font-size: 19px; color: var(--ink-2); max-width: 46ch; line-height: 1.5; }
+.hero-actions { grid-column: 1 / -1; display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.hero-actions .btn { font-size: 18px; padding: 14px 22px; }
+.pulse { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 32px; padding-top: 28px; border-top: 1px solid var(--line); }
+.pulse div { display: flex; flex-direction: column; gap: 2px; }
+.pulse .n { font-family: var(--display); font-weight: 600; font-size: 52px; line-height: 1; color: var(--ink); }
+.pulse .l { color: var(--ink-3); font-size: 14px; }
+.how { margin-top: 80px; }
+.how h2, .twoup h2, .promise h2 { font-family: var(--display); font-weight: 600; font-size: 34px; text-transform: uppercase; letter-spacing: 0.02em; }
+.flow { list-style: none; margin: 22px 0 0; padding: 0; counter-reset: f; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.flow li { background: var(--panel); border-radius: var(--radius); padding: 16px 18px 18px; display: grid; grid-template-columns: 34px 1fr; gap: 2px 12px; }
+.flow li::before { counter-increment: f; content: counter(f); grid-row: 1 / span 2; font-family: var(--display); font-weight: 600; font-size: 34px; line-height: 1; color: var(--amber); }
+.flow li b { font-family: var(--display); font-weight: 600; font-size: 22px; text-transform: uppercase; letter-spacing: 0.04em; }
+.flow li span { color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+.flow code { background: var(--bg-2); padding: 1px 6px; border-radius: 5px; }
+.twoup { margin-top: 72px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+.twoup p { margin-top: 12px; font-size: 18px; color: var(--ink-2); max-width: 46ch; line-height: 1.5; }
+.promise { margin-top: 72px; }
+.promise ul { margin: 18px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; max-width: 70ch; }
+.promise li { padding-left: 26px; position: relative; font-size: 17px; color: var(--ink-2); }
+.promise li::before { content: ""; position: absolute; left: 0; top: 10px; width: 12px; height: 6px; border-left: 2px solid var(--green); border-bottom: 2px solid var(--green); transform: rotate(-45deg); }
+.promise .hero-actions { margin-top: 28px; }
+.foot { margin-top: 80px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; color: var(--ink-3); font-size: 14px; }
+@media (max-width: 800px) {
+  .hero { grid-template-columns: 1fr; padding-top: 44px; }
+  .pulse { grid-template-columns: repeat(2, 1fr); }
+  .pulse .n { font-size: 40px; }
+  .twoup { grid-template-columns: 1fr; gap: 28px; }
+}

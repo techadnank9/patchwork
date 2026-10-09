@@ -72,7 +72,7 @@ export function sevChip(sev) {
 }
 // Shared header with nav
 export function header(current) {
-  const links = [["index.html", "Board"], ["history.html", "History"], ["join.html", "Join"]]
+  const links = [["board.html", "Live board"], ["history.html", "History"], ["join.html", "Scan my repo"]]
   return el("header", { class: "top" },
     el("a", { class: "brand", href: "index.html" }, el("span", { class: "name", text: "Patchwork" }), el("span", { class: "tag", text: "Found, fixed, proven." })),
     el("nav", { class: "nav" }, ...links.map(([href, label]) => el("a", { href, text: label, "aria-current": current === href ? "page" : undefined }))),
