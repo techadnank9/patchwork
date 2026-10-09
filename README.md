@@ -18,7 +18,14 @@ Built solo at the Cyberdefense Hackathon, San Francisco, October 9, 2026. All co
 | **Semgrep** | Finds every issue (`semgrep scan --config auto`), and proves every fix by rescanning the patched file. Semgrep Guardian watched our own code as we wrote it; see [FINDINGS.md](FINDINGS.md). | Findings count on the board, "Rescan: finding gone" on every fix view |
 | **Guild** | Hosts and runs the three agents (`agents/`). Called through an API trigger. Every verdict, plan, and fix stores its Guild session URL as the audit trail. | "Triage session on Guild" and "Fix session on Guild" links on each fix view |
 | **ClickHouse Cloud** | Append-only store for scans, events, findings, verdicts, plans, fixes, and fix memory. Every screen is a query in [queries.sql](queries.sql). Variant hunt (Q3) and room memory (Q7) are ClickHouse queries that directly drive remediation. | "ClickHouse: N rows, last query X ms" on the board |
+| **Akash** | Hosts the app itself: one container from the public GHCR image, SDL in `deploy.yaml`. | The live URL above |
 | **Model** | Guild's managed model access (Gemini 2.5 Flash at the time of the event). | Stored as `backend = 'guild'` on every row |
+
+## Where it runs
+
+Live during the event: http://fnppdkvs7devtbbbtnlc32vqpc.ingress.cpu.lax.lsn.akash.pub (join page at /join.html, history at /history.html).
+
+Hosted on **Akash** (deployment 1791580753099, provider overclock, na-us-west, 2 vCPU, 4 GiB) from the public image `ghcr.io/techadnank9/patchwork:latest`, which GitHub Actions builds on every push to master. One container serves the frontend and the API. The SDL is [deploy.yaml](deploy.yaml); the two secret values are entered in the Akash console, never committed. Data stays in ClickHouse Cloud and agents run on Guild, so the container itself is stateless apart from the clones in `work/`.
 
 ## Run it
 
