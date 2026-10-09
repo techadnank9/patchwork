@@ -1,0 +1,6 @@
+node_modules
+work
+.env
+.git
+.claude
+HANDOFF.html

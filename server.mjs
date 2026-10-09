@@ -224,7 +224,7 @@ app.get("/api/qr", async (req, res) => {
 
 app.get("/api/config", (req, res) => res.json({ base: BASE }))
 
-app.listen(PORT, "127.0.0.1", () => console.log(`Patchwork on http://localhost:${PORT}  public: ${BASE}`))
+app.listen(PORT, process.env.HOST || "127.0.0.1", () => console.log(`Patchwork on http://localhost:${PORT}  public: ${BASE}`))
 
 process.on("SIGINT", async () => { await flush().catch(() => {}); process.exit(0) })
 

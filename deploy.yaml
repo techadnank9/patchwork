@@ -1,0 +1,50 @@
+# Akash SDL for Patchwork. One service: the Express app serves the frontend and the API.
+# Fill the two secret values before deploying. Never commit a filled copy.
+---
+version: "2.0"
+services:
+  patchwork:
+    image: ghcr.io/techadnank9/patchwork:latest
+    expose:
+      - port: 3000
+        as: 80
+        to:
+          - global: true
+    env:
+      - HOST=0.0.0.0
+      - PORT=3000
+      - CLICKHOUSE_URL=https://hzenal3kzk.westus3.azure.clickhouse.cloud:8443
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=FILL_ME
+      - GUILD_KEY=FILL_ME
+      - GUILD_WORKSPACE=adnan/patchwork
+      - GUILD_TRIAGE_AGENT=adnan~triage-agent
+      - GUILD_PLANNER_AGENT=adnan~planner-agent
+      - GUILD_FIXER_AGENT=adnan~fixer-agent
+      - AGENT_BACKEND=guild
+      - PUBLIC_BASE_URL=FILL_AFTER_FIRST_DEPLOY
+      - MAX_TRIAGE_PER_REPO=8
+      - MAX_FIX_PER_REPO=5
+      - TRIAGE_CONCURRENCY=4
+      - SCAN_CONCURRENCY=2
+profiles:
+  compute:
+    patchwork:
+      resources:
+        cpu:
+          units: 2
+        memory:
+          size: 4Gi
+        storage:
+          size: 20Gi
+  placement:
+    dcloud:
+      pricing:
+        patchwork:
+          denom: uakt
+          amount: 10000
+deployment:
+  patchwork:
+    dcloud:
+      profile: patchwork
+      count: 1
