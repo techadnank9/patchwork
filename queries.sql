@@ -59,7 +59,8 @@ SELECT
   round(quantile(0.9)(latency_ms) / 1000, 1) AS p90_fix_seconds,
   count()                                    AS verified
 FROM fixes
-WHERE status = 'verified';
+WHERE status = 'verified'
+  AND scan_id IN (SELECT scan_id FROM scans WHERE source = 'room');
 
 -- Q6. Live feed: last 30 pipeline events. Hide team names of teams that did not opt in.
 SELECT e.ts AS ts, if(s.is_public = 1, e.team, 'A team') AS team, e.stage AS stage, e.detail AS detail, e.duration_ms AS duration_ms

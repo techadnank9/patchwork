@@ -97,7 +97,7 @@ app.get("/api/board", async (req, res) => {
       query(withSource(SQL.Q2, source)),
       query(withSource(SQL.Q3, source)),
       query(withSource(SQL.Q4, source)),
-      query(SQL.Q5),
+      query(withSource(SQL.Q5, source)),
       query(withSource(SQL.Q6, source)),
       query("SELECT (SELECT count() FROM scans) + (SELECT count() FROM pipeline_events) + (SELECT count() FROM findings) + (SELECT count() FROM verdicts) + (SELECT count() FROM plans) + (SELECT count() FROM fixes) + (SELECT count() FROM fix_memory) AS rows_total"),
     ])
