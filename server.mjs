@@ -192,7 +192,7 @@ app.get("/api/scans/:id", async (req, res) => {
   }
 })
 
-// Repo map: top-level layout of our clone plus every file Semgrep flagged, for the diagram on the report.
+// Repo map: top-level layout of our clone plus every file the scanner flagged, for the diagram on the report.
 app.get("/api/scans/:id/tree", async (req, res) => {
   try {
     const scan = await authScan(req, res)

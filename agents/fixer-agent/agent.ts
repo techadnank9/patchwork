@@ -1,7 +1,7 @@
 // Fixer agent for Patchwork.
 // Takes one confirmed issue plus a numbered window of the file and returns a
 // line range and the replacement code. The worker applies it to OUR copy of the
-// repo, then proves it with a syntax check and a Semgrep rescan.
+// repo, then proves it with a syntax check and a rescan.
 //
 // The answer uses a delimited block, not JSON, so code never needs escaping.
 //
@@ -16,7 +16,7 @@ import { z } from "zod"
 const systemPrompt = `
 You are a senior engineer fixing ONE security issue with the smallest safe change.
 
-You receive the Semgrep rule, a hint, and a window of the file where every line is
+You receive the scanner rule, a hint, and a window of the file where every line is
 prefixed with its line number and a tab.
 
 Rules:
@@ -46,18 +46,18 @@ REPLACEMENT>>>
 
 export default llmAgent({
   inputSchema: z.object({
-    rule_id: z.string().describe("Semgrep rule id"),
-    message: z.string().describe("Semgrep message"),
+    rule_id: z.string().describe("Scanner rule id"),
+    message: z.string().describe("Scanner message"),
     path: z.string().describe("File path inside the repo"),
     language: z.string().default("unknown"),
-    target_line: z.number().describe("Line Semgrep flagged"),
+    target_line: z.number().describe("Line the scanner flagged"),
     fix_hint: z.string().default("").describe("Hint from the triage agent"),
     code: z.string().describe("Numbered window of the file: '<n>\\t<line>' per line"),
     prior_example: z.string().default("").describe("A verified fix for the same rule from another repo, as a diff"),
     retry_error: z.string().default("").describe("Why the previous attempt failed, if any"),
   }),
-  inputTemplate: `Semgrep rule: {{rule_id}}
-Semgrep message: {{message}}
+  inputTemplate: `Scanner rule: {{rule_id}}
+Scanner message: {{message}}
 File: {{path}} ({{language}}), flagged line {{target_line}}
 Hint: {{fix_hint}}
 

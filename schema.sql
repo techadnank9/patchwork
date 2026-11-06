@@ -29,10 +29,13 @@ CREATE TABLE IF NOT EXISTS findings (
   line             UInt32,
   end_line         UInt32,
   language         LowCardinality(String),
-  semgrep_severity LowCardinality(String),
+  rule_severity    LowCardinality(String),
   message          String,
   snippet          String                          -- secrets masked BEFORE insert
 ) ENGINE = MergeTree ORDER BY (rule_id, scan_id, finding_id);
+
+-- Migration: older databases used a different name for this column.
+ALTER TABLE findings RENAME COLUMN IF EXISTS semgrep_severity TO rule_severity;
 
 CREATE TABLE IF NOT EXISTS verdicts (
   ts          DateTime64(3) DEFAULT now64(3),

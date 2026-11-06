@@ -6,7 +6,7 @@ import { promisify } from "node:util"
 import path from "node:path"
 import { insert, insertNow, flush, query, close } from "./lib/db.mjs"
 import { cloneRepo, readRepoFile, snippetAround, repoSlug, validateRepoUrl, WORK_DIR } from "./lib/repo.mjs"
-import { scan, filterAndRank } from "./lib/semgrep.mjs"
+import { scan, filterAndRank } from "./lib/scanner.mjs"
 import { redact } from "./lib/redact.mjs"
 import { runAgent, parseVerdict, parsePlan } from "./lib/agents.mjs"
 import { fixAndVerify } from "./lib/verify.mjs"
@@ -33,7 +33,7 @@ export async function runScan({ scan_id, team, repo_url, is_public = 0, source =
 
     // Scan
     t = Date.now()
-    event("scanning", "running Semgrep")
+    event("scanning", "running the scanner")
     const result = await scan(dir, ".")
     const ranked = filterAndRank(result.results)
     event("scanning", `${ranked.length} findings`, Date.now() - t)
@@ -69,7 +69,7 @@ export async function runScan({ scan_id, team, repo_url, is_public = 0, source =
     await parallel(toTriage, env("TRIAGE_CONCURRENCY", 4), async (f) => {
       try {
         const res = await runAgent("triage", {
-          rule_id: f.rule_id, semgrep_severity: f.semgrep_severity, message: f.message,
+          rule_id: f.rule_id, rule_severity: f.rule_severity, message: f.message,
           path: f.path, line: f.line, language: f.language, snippet: f.snippet,
         })
         const v = parseVerdict(res.events)

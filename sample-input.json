@@ -1,6 +1,6 @@
 {
   "rule_id": "python.flask.security.injection.tainted-sql-string",
-  "semgrep_severity": "ERROR",
+  "rule_severity": "ERROR",
   "message": "User input is concatenated into a SQL string. Use parameterized queries.",
   "path": "api/search.py",
   "line": 42,

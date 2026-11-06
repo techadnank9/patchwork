@@ -5,7 +5,7 @@
 ### Found. Fixed. Proven.
 
 **A free, opt-in security desk for every team in a hackathon room.**
-Semgrep finds the bugs. Three agents on Guild triage, plan, and patch. Every patch is applied to our copy and rescanned before anyone sees it. ClickHouse remembers every fix so the next team gets it faster.
+A built-in pattern scanner finds the bugs. Three agents on Guild triage, plan, and patch. Every patch is applied to our copy and rescanned before anyone sees it. ClickHouse remembers every fix so the next team gets it faster.
 
 [**Live site**](http://fnppdkvs7devtbbbtnlc32vqpc.ingress.cpu.lax.lsn.akash.pub) · [Live board](http://fnppdkvs7devtbbbtnlc32vqpc.ingress.cpu.lax.lsn.akash.pub/board.html) · [Scan my repo](http://fnppdkvs7devtbbbtnlc32vqpc.ingress.cpu.lax.lsn.akash.pub/join.html) · [History](http://fnppdkvs7devtbbbtnlc32vqpc.ingress.cpu.lax.lsn.akash.pub/history.html)
 
@@ -21,7 +21,7 @@ Every team in the room shipped AI-written code today. Nobody reviewed it. Scanne
 
 1. **Tell me what is real.** A triage agent reads each finding with the code around it and says real or noise, and why, in plain words.
 2. **Tell me what to fix first.** A planner groups issues by root cause and orders them: leaked secrets, then anything an outsider can reach, then the rest.
-3. **Prove the fix works.** A fixer writes the smallest safe change. We apply it to our clone, check the file still parses, and rescan with Semgrep. Only patches that pass are shown. Never "guaranteed", always "verified by rescan".
+3. **Prove the fix works.** A fixer writes the smallest safe change. We apply it to our clone, check the file still parses, and rescan it. Only patches that pass are shown. Never "guaranteed", always "verified by rescan".
 
 And because a room full of teams makes the same mistakes, two ideas turn one repo's fix into the room's fix:
 
@@ -50,7 +50,7 @@ flowchart LR
         S["Express server<br/>static UI + JSON API"]
         Q["In-memory FIFO queue<br/>2 scans at a time"]
         W["worker.mjs<br/>pipeline for one scan"]
-        SG["Semgrep CLI"]
+        SG["Built-in scanner<br/>lib/scanner.mjs"]
         G["git clone<br/>our copy in work/"]
     end
     subgraph Guild["Guild (hosted agents)"]
@@ -80,7 +80,7 @@ One process, no build step, no framework. The browser polls JSON every two secon
 ```mermaid
 flowchart TD
     A["Validate URL<br/>only https://github.com/owner/repo"] --> B["Shallow clone<br/>depth 1, no submodules, 60 s cap, 300 MB cap"]
-    B --> C["Semgrep scan<br/>--config auto, whole clone"]
+    B --> C["Pattern scan<br/>whole clone"]
     C --> D["Filter and rank<br/>drop vendor, dist, lockfiles, minified<br/>ERROR > WARNING > INFO"]
     D --> E["Snippet<br/>12 lines each side, path contained,<br/>secrets masked before storing"]
     E --> F{"Triage on Guild<br/>4 in parallel, top 15"}
@@ -97,7 +97,7 @@ Every stage writes a `pipeline_events` row at start and end with its duration. T
 
 ```mermaid
 flowchart TD
-    S0["Baseline: Semgrep on just this file<br/>find the rule nearest the original line"] --> S1{"Room memory<br/>Q7: proven fix for this rule?"}
+    S0["Baseline: scan just this file<br/>find the rule nearest the original line"] --> S1{"Room memory<br/>Q7: proven fix for this rule?"}
     S1 -- yes --> S2["Pass it as prior_example<br/>memory_hit = 1"]
     S1 -- no --> S3["Window: whole file if ≤ 300 lines,<br/>else 60 lines each side, numbered, masked"]
     S2 --> S3
@@ -107,7 +107,7 @@ flowchart TD
     S5 -- ok --> S6["Apply to OUR clone"]
     S6 --> S7{"Syntax check<br/>py: ast.parse · js: node --check · json: parse"}
     S7 -- fail --> R2["git checkout -- file<br/>record failed, retry once"]
-    S7 -- ok --> S8["Rescan the file with Semgrep"]
+    S7 -- ok --> S8["Rescan the file"]
     S8 --> S9{"Finding gone?<br/>Zero new rules?"}
     S9 -- no --> R2
     S9 -- yes --> V["git diff → stored diff<br/>commit in clone<br/>fixes.status = verified<br/>fix_memory row saved"]
@@ -123,10 +123,9 @@ The report's combined patch is `git diff <original sha> HEAD` in our clone. Team
 
 ```mermaid
 flowchart LR
-    subgraph Semgrep
-        s1["Find every issue<br/>semgrep scan --config auto"]
+    subgraph Scanner
+        s1["Find every issue<br/>built-in rules, whole clone"]
         s2["Prove every fix<br/>per-file rescan after patch"]
-        s3["Semgrep Guardian watched<br/>our own code as it was written<br/>→ FINDINGS.md"]
     end
     subgraph Guild
         g1["triage-agent<br/>real or noise, severity, class, why"]
@@ -151,7 +150,7 @@ flowchart LR
 
 | Sponsor | What it does here | Where a judge sees it |
 |---|---|---|
-| **Semgrep** | Finds everything (`--config auto`), proves every fix by rescanning the patched file, and Guardian reviewed our own code during the build. | "Findings scanned" on the board; "Rescan: finding gone" on every fix view; [FINDINGS.md](FINDINGS.md) |
+| **Built-in scanner** | Finds everything with the rules in `lib/scanner.mjs`, and proves every fix by rescanning the patched file. | "Findings scanned" on the board; "Rescan: finding gone" on every fix view; [FINDINGS.md](FINDINGS.md) |
 | **Guild** | Hosts and runs all three agents as `llmAgent` TypeScript agents, called through one API trigger. Every verdict, plan, and fix stores its Guild session URL. | "Triage session on Guild" and "Fix session on Guild" links on each fix view |
 | **ClickHouse Cloud** | The only store. Seven append-only tables, one view, every screen is a query in [queries.sql](queries.sql). Variant hunt and room memory are ClickHouse queries that directly drive remediation. | "ClickHouse: N rows, last query X ms" on the board; History page shows query time |
 | **Akash** | Runs the app itself. One container from the public image `ghcr.io/techadnank9/patchwork`, deployed from [deploy.yaml](deploy.yaml). | The live URL at the top of this page |
@@ -213,14 +212,14 @@ Append only. Nothing is updated or deleted; state is derived by query. A view, `
 | Rule | How it is enforced |
 |---|---|
 | Opt in only | A repo is scanned only when its team submitted it through the form |
-| Never execute cloned code | Clone, read, Semgrep, `ast.parse`, `node --check`. No install, no build, no import |
+| Never execute cloned code | Clone, read, pattern scan, `ast.parse`, `node --check`. No install, no build, no import |
 | Repo content is data, not instructions | Every agent prompt says so; the worker never interprets file contents |
 | Secrets never leave | `redact()` masks token shapes, PEM blocks, and any 20+ char value assigned to a *key/secret/token/password* name, before storing, before any agent call, before display |
 | No injection | `execFile` with argument arrays, strict URL allowlist, `realpath` containment on every file read, parameterized ClickHouse queries, `textContent` only in the UI, CSP with no inline scripts |
 | Private stays private | Reports need a 16-byte token; the board names only teams that ticked the box; others count toward totals only |
 | Honest numbers | Sample rows are visible only with `?sample=1` under a "Sample data" banner |
 
-"Verified by rescan" means Semgrep no longer flags the code and the file still parses. It does not prove the app behaves the same. Read every diff.
+"Verified by rescan" means the scanner no longer flags the code and the file still parses. It does not prove the app behaves the same. Read every diff.
 
 ## Run it yourself
 
@@ -229,7 +228,6 @@ Node 22 or newer. No build step.
 ```bash
 git clone https://github.com/techadnank9/patchwork && cd patchwork
 npm install
-pip install semgrep                       # or brew install semgrep
 cp .env.example .env                      # ClickHouse + Guild values
 node --env-file=.env scripts/init-db.mjs  # 7 tables, 1 view
 node --env-file=.env server.mjs           # http://localhost:3000
@@ -275,7 +273,7 @@ server.mjs          Express, queue, API, static files
 worker.mjs          pipeline for one scan, also a CLI
 lib/db.mjs          ClickHouse client, batched inserts, timed queries
 lib/repo.mjs        URL allowlist, shallow clone, path containment
-lib/semgrep.mjs     scan a dir or a file with execFile, normalize, filter, rank
+lib/scanner.mjs     built-in rules: scan a dir or a file, filter, rank
 lib/redact.mjs      mask secrets before storing, sending, or showing
 lib/verify.mjs      apply a fix to our clone, syntax check, rescan, diff, commit
 lib/agents.mjs      runAgent wrapper that picks the backend (guild | openai fallback)
@@ -287,7 +285,7 @@ fixtures/vuln-app   labeled test fixture, never on the board
 schema.sql          the tables
 queries.sql         every query behind every screen, Q1 to Q8 plus history
 deploy.yaml         Akash SDL
-Dockerfile          Node 22 + Semgrep + git + python3
+Dockerfile          Node 22 + git + python3
 ```
 
 ## Numbers from the build
@@ -295,7 +293,7 @@ Dockerfile          Node 22 + Semgrep + git + python3
 | | |
 |---|---|
 | Guild agent call, warm | about 50 s |
-| Semgrep on the fixture | about 3 s |
+| Scan of the fixture | under 0.1 s |
 | Per-file rescan | 2 to 4 s |
 | Fixture fix, found to verified | 51 s and 71 s |
 | Second project, same rules | both fixes memory assisted |

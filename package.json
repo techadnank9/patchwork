@@ -2,7 +2,7 @@
   "name": "patchwork",
   "version": "0.1.0",
   "private": true,
-  "description": "Found, fixed, proven. A free opt-in security desk for a hackathon room: Semgrep finds, Guild agents triage/plan/fix, every patch is verified by rescan, ClickHouse keeps the room's memory.",
+  "description": "Found, fixed, proven. A free opt-in security desk for a hackathon room: a built-in scanner finds, Guild agents triage/plan/fix, every patch is verified by rescan, ClickHouse keeps the room's memory.",
   "type": "module",
   "engines": {
     "node": ">=22"

@@ -140,7 +140,7 @@ async function load() {
   const fixingKey = fixingNow && st.stage !== "done" ? fixingNow.detail.slice(7) : null
   const waiting = d.waiting
   $("#stage-word").textContent = waiting ? "Waiting for you" : STAGE_WORD[st.stage] || st.stage
-  $("#stage-detail").textContent = waiting ? ({ triage: "Semgrep is done. Ask the triage agent which findings are real.", plan: "Triage is done. Ask the planner for an ordered fix plan.", fix: "Plan is ready. Let the fixer patch our copy and prove each change." })[waiting] : st.detail && st.stage !== "done" ? st.detail : st.stage === "done" ? "Everything below is final. Rescan any time." : ""
+  $("#stage-detail").textContent = waiting ? ({ triage: "The scan is done. Ask the triage agent which findings are real.", plan: "Triage is done. Ask the planner for an ordered fix plan.", fix: "Plan is ready. Let the fixer patch our copy and prove each change." })[waiting] : st.detail && st.stage !== "done" ? st.detail : st.stage === "done" ? "Everything below is final. Rescan any time." : ""
   const run = $("#run")
   if (waiting) { run.hidden = false; run.disabled = false; run.textContent = RUN_WORD[waiting] || "Run" } else run.hidden = true
   $("#stage").classList.toggle("waiting", !!waiting)
@@ -192,7 +192,7 @@ async function load() {
   const empty = $("#issues-empty")
   if (!d.issues.length) {
     empty.hidden = false
-    empty.textContent = st.stage === "done" ? (d.findings_total ? "Every finding was ruled out as noise. Nothing to fix." : "Semgrep found nothing to look at. Clean scan.") : "Issues appear here as triage confirms them."
+    empty.textContent = st.stage === "done" ? (d.findings_total ? "Every finding was ruled out as noise. Nothing to fix." : "The scanner found nothing to look at. Clean scan.") : "Issues appear here as triage confirms them."
   } else empty.hidden = true
 
   if (d.patch_available) {

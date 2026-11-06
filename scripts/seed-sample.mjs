@@ -21,14 +21,14 @@ for (const [team, repo_url, cells] of teams) {
   for (const [bug_class, severity, real, fixed] of cells) {
     for (let k = 0; k < real; k++) {
       const finding_id = randomUUID()
-      insert("findings", { finding_id, scan_id, rule_id: RULES[bug_class], path: `src/${bug_class}_${k}.py`, line: 40 + k, end_line: 41 + k, language: "python", semgrep_severity: "ERROR", message: "Sample finding", snippet: "40  rows = conn.execute(\"SELECT * FROM t WHERE x = '\" + q + \"'\")" })
+      insert("findings", { finding_id, scan_id, rule_id: RULES[bug_class], path: `src/${bug_class}_${k}.py`, line: 40 + k, end_line: 41 + k, language: "python", rule_severity: "ERROR", message: "Sample finding", snippet: "40  rows = conn.execute(\"SELECT * FROM t WHERE x = '\" + q + \"'\")" })
       insert("verdicts", { finding_id, scan_id, verdict: "real", severity, bug_class, title: TITLES[bug_class], why: "Sample explanation of what can go wrong.", fix_hint: "Sample hint.", confidence: 0.9, backend: "guild", session_url: "", latency_ms: 4000 })
       if (k < fixed) insert("fixes", { fix_id: randomUUID(), finding_id, scan_id, attempt: 1, status: "verified", memory_hit: n++ % 3 === 0 ? 1 : 0, explanation: "Sample fix.", diff: "--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@\n-bad\n+good", syntax_ok: 1, finding_gone: 1, new_issues: 0, error: "", session_url: "", latency_ms: 38000 + k * 5000 })
     }
   }
   for (let k = 0; k < 3; k++) {
     const finding_id = randomUUID()
-    insert("findings", { finding_id, scan_id, rule_id: "generic.sample.noise", path: `tests/test_${k}.py`, line: 10, end_line: 10, language: "python", semgrep_severity: "WARNING", message: "Sample", snippet: "10  x = 'changeme'" })
+    insert("findings", { finding_id, scan_id, rule_id: "generic.sample.noise", path: `tests/test_${k}.py`, line: 10, end_line: 10, language: "python", rule_severity: "WARNING", message: "Sample", snippet: "10  x = 'changeme'" })
     insert("verdicts", { finding_id, scan_id, verdict: "noise", severity: "low", bug_class: "other", title: "Placeholder in a test", why: "Test file.", fix_hint: "", confidence: 0.9, backend: "guild", session_url: "", latency_ms: 3000 })
   }
 }

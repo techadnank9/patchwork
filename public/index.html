@@ -13,7 +13,7 @@
   <section class="hero">
     <p class="hero-line">A free security desk for every team in this room.</p>
     <h1>Found.<br>Fixed.<br>Proven.</h1>
-    <p class="hero-sub">Paste a public GitHub link. Semgrep finds the issues, three agents on Guild sort the real ones from the noise, write a plan, and write the patch. Every patch is applied to our copy and rescanned before you ever see it. Your report is private. The room sees only what you allow.</p>
+    <p class="hero-sub">Paste a public GitHub link. Our built-in scanner finds the issues, three agents on Guild sort the real ones from the noise, write a plan, and write the patch. Every patch is applied to our copy and rescanned before you ever see it. Your report is private. The room sees only what you allow.</p>
     <div class="hero-actions">
       <a class="btn" href="join.html">Scan my repo</a>
       <a class="btn quiet" href="board.html">See the live board</a>
@@ -42,7 +42,7 @@
     <h2>What happens to your repo</h2>
     <ol class="flow">
       <li><b>Clone</b><span>A shallow copy of your public repo lands on our machine. We never run it.</span></li>
-      <li><b>Scan</b><span>Semgrep's full ruleset reads every file. Vendored and generated code is skipped.</span></li>
+      <li><b>Scan</b><span>The built-in scanner reads every file. Vendored and generated code is skipped.</span></li>
       <li><b>Triage</b><span>A Guild agent reads each finding with the code around it and says real or noise, and why, in plain words.</span></li>
       <li><b>Plan</b><span>A second agent groups the real issues by root cause and orders them: leaked secrets first, then anything an outsider can reach.</span></li>
       <li><b>Fix</b><span>A third agent writes the smallest safe change for each issue, one at a time.</span></li>
@@ -67,7 +67,7 @@
     <ul>
       <li>Opt in only. We scan a repo when its team submits it, and nothing else.</li>
       <li>Read only. We never push to your repo, never touch a deployed app.</li>
-      <li>We never execute your code. Clone, read, Semgrep, a parse check, nothing more.</li>
+      <li>We never execute your code. Clone, read, pattern scan, a parse check, nothing more.</li>
       <li>Secrets are masked before they are stored, sent to any model, or shown.</li>
       <li>Your team name appears on the public board only if you tick the box.</li>
       <li>"Verified by rescan" means the scanner no longer flags the code and the file still parses. It does not prove the app behaves the same. Read every diff.</li>
@@ -78,7 +78,7 @@
 
   <footer class="foot">
     <span>Built in one afternoon at the Cyberdefense Hackathon, San Francisco.</span>
-    <span>Semgrep finds. Guild runs the agents. ClickHouse keeps the room's memory. Akash hosts it.</span>
+    <span>Our scanner finds. Guild runs the agents. ClickHouse keeps the room's memory. Akash hosts it.</span>
     <a href="https://github.com/techadnank9/patchwork" rel="noopener">Source on GitHub</a>
   </footer>
 </main>
